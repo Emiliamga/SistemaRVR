@@ -72,7 +72,7 @@ class VisualizadorLancamentos:
         
 
     def criar_treeview(self):
-        colunas = ('Data', 'Tipo', 'CNPJ/CPF', 'Nome', 'Referência', 'Vr. Unit.', 
+        colunas = ('Data', 'Tipo', 'CNPJ/CPF', 'Nome', 'Referência', 'NF', 'Vr. Unit.', 
                    'Dias', 'Valor', 'Vencimento', 'Categoria', 'Dados Bancários', 'Observação')
         
         self.tree = ttk.Treeview(self.frame_principal, columns=colunas, show='headings')
@@ -85,7 +85,7 @@ class VisualizadorLancamentos:
                 width = 150
             elif col in ['Data', 'Vencimento']:
                 width = 100
-            elif col in ['Vr. Unit.', 'Valor']:
+            elif col in ['Vr. Unit.', 'Valor', 'NF']:
                 width = 100
             else:
                 width = 80
@@ -117,6 +117,7 @@ class VisualizadorLancamentos:
                 lancamento['cnpj_cpf'],
                 lancamento['nome'],
                 lancamento['referencia'],
+                lancamento.get('nf', ''),  # Usar get() para compatibilidade
                 lancamento['vr_unit'],
                 lancamento['dias'],
                 lancamento['valor'],
@@ -152,13 +153,14 @@ class VisualizadorLancamentos:
             'cnpj_cpf': valores[2],
             'nome': valores[3],
             'referencia': valores[4],
-            'vr_unit': valores[5],
-            'dias': valores[6],
-            'valor': valores[7],
-            'dt_vencto': valores[8],
-            'categoria': valores[9],
-            'dados_bancarios': valores[10],
-            'observacao': valores[11] if len(valores) > 11 else ''
+            'nf': valores[5],
+            'vr_unit': valores[6],
+            'dias': valores[7],
+            'valor': valores[8],
+            'dt_vencto': valores[9],
+            'categoria': valores[10],
+            'dados_bancarios': valores[11],
+            'observacao': valores[12] if len(valores) > 12 else ''
         }
         
         # Criar editor
@@ -182,6 +184,7 @@ class VisualizadorLancamentos:
                 novos_dados['cnpj_cpf'],
                 novos_dados['nome'],
                 novos_dados['referencia'],
+                novos_dados['nf'],
                 novos_dados['vr_unit'],
                 novos_dados['dias'],
                 novos_dados['valor'],
@@ -244,7 +247,7 @@ class VisualizadorLancamentos:
     def atualizar_resumo(self):
         items = self.tree.get_children()
         total_lancamentos = len(items)
-        valor_total = sum(float(self.tree.item(item)['values'][7]) for item in items)
+        valor_total = sum(float(self.tree.item(item)['values'][8]) for item in items)
         
         self.lbl_total_lancamentos.config(text=f"Total de Lançamentos: {total_lancamentos}")
         self.lbl_valor_total.config(text=f"Valor Total: R$ {valor_total:,.2f}")
@@ -300,30 +303,35 @@ class EditorLancamento:
         self.referencia = ttk.Entry(frame_despesa)
         self.referencia.grid(row=2, column=1, padx=5, pady=2)
         
+        # NF
+        ttk.Label(frame_despesa, text="NF:").grid(row=3, column=0, padx=5, pady=2)
+        self.nf = ttk.Entry(frame_despesa)  # Corrigido: campo NF
+        self.nf.grid(row=3, column=1, padx=5, pady=2)
+        
         # Valor Unitário
-        ttk.Label(frame_despesa, text="Valor Unitário:").grid(row=3, column=0, padx=5, pady=2)
-        self.vr_unit = ttk.Entry(frame_despesa)
-        self.vr_unit.grid(row=3, column=1, padx=5, pady=2)
+        ttk.Label(frame_despesa, text="Valor Unitário:").grid(row=4, column=0, padx=5, pady=2)
+        self.vr_unit = ttk.Entry(frame_despesa)  # Corrigido: campo vr_unit
+        self.vr_unit.grid(row=4, column=1, padx=5, pady=2)
         
         # Dias
-        ttk.Label(frame_despesa, text="Dias:").grid(row=4, column=0, padx=5, pady=2)
+        ttk.Label(frame_despesa, text="Dias:").grid(row=5, column=0, padx=5, pady=2)
         self.dias = ttk.Entry(frame_despesa)
-        self.dias.grid(row=4, column=1, padx=5, pady=2)
+        self.dias.grid(row=5, column=1, padx=5, pady=2)
         
         # Valor Total
-        ttk.Label(frame_despesa, text="Valor Total:").grid(row=5, column=0, padx=5, pady=2)
+        ttk.Label(frame_despesa, text="Valor Total:").grid(row=6, column=0, padx=5, pady=2)
         self.valor = ttk.Entry(frame_despesa, state='readonly')
-        self.valor.grid(row=5, column=1, padx=5, pady=2)
+        self.valor.grid(row=6, column=1, padx=5, pady=2)
         
         # Data de Vencimento
-        ttk.Label(frame_despesa, text="Data Vencimento:").grid(row=6, column=0, padx=5, pady=2)
+        ttk.Label(frame_despesa, text="Data Vencimento:").grid(row=7, column=0, padx=5, pady=2)
         self.dt_vencto = DateEntry(frame_despesa, format='dd/mm/yyyy', locale='pt_BR')
-        self.dt_vencto.grid(row=6, column=1, padx=5, pady=2)
+        self.dt_vencto.grid(row=7, column=1, padx=5, pady=2)
         
         # Observação
-        ttk.Label(frame_despesa, text="Observação:").grid(row=7, column=0, padx=5, pady=2)
+        ttk.Label(frame_despesa, text="Observação:").grid(row=8, column=0, padx=5, pady=2)
         self.observacao = ttk.Entry(frame_despesa)
-        self.observacao.grid(row=7, column=1, padx=5, pady=2)
+        self.observacao.grid(row=8, column=1, padx=5, pady=2)
         
         # Eventos
         self.vr_unit.bind('<KeyRelease>', self.calcular_valor_total)
@@ -352,6 +360,7 @@ class EditorLancamento:
         self.data_rel.set_date(datetime.strptime(self.dados['data'], '%d/%m/%Y'))
         self.tp_desp.insert(0, self.dados['tp_desp'])
         self.referencia.insert(0, self.dados['referencia'])
+        self.nf.insert(0, self.dados.get('nf', ''))
         self.vr_unit.insert(0, self.dados['vr_unit'])
         self.dias.insert(0, str(self.dados['dias']))
         
@@ -403,6 +412,7 @@ class EditorLancamento:
                 'cnpj_cpf': self.dados['cnpj_cpf'],
                 'nome': self.dados['nome'],
                 'referencia': self.referencia.get(),
+                'nf': self.nf.get(),
                 'vr_unit': self.vr_unit.get(),
                 'dias': int(self.dias.get() or 1),
                 'valor': self.valor.get(),
@@ -454,6 +464,7 @@ class SistemaEntradaDados:
         self.campos_despesa = {
             'tp_desp': tk.Entry(temp_frame),
             'referencia': tk.Entry(temp_frame),
+            'nf': tk.Entry(temp_frame),
             'vr_unit': tk.Entry(temp_frame),
             'dias': tk.Entry(temp_frame),
             'valor': tk.Entry(temp_frame),
@@ -1220,6 +1231,7 @@ class SistemaEntradaDados:
         campos_despesa = [
             ('tp_desp', 'Tipo Despesa (1-7):'),
             ('referencia', 'Referência:'),
+            ('nf', 'NF:'),  # Novo campo
             ('vr_unit', 'Valor Unitário:'),
             ('dias', 'Dias:'),
             ('valor', 'Valor Total:'),
@@ -1351,6 +1363,8 @@ class SistemaEntradaDados:
                 self.data_rel_entry.set_date(datetime.strptime(parcela['data_rel'], '%d/%m/%Y'))
                 self.campos_despesa['tp_desp'].delete(0, tk.END)
                 self.campos_despesa['tp_desp'].insert(0, self.gestor_parcelas.tipo_despesa_valor)
+                self.campos_despesa['nf'].delete(0, tk.END)
+                self.campos_despesa['nf'].insert(0, parcela['nf'])
                 
                 if isinstance(self.campos_despesa['referencia'], ttk.Combobox):
                     self.campos_despesa['referencia'].set(parcela['referencia'])
@@ -2186,6 +2200,7 @@ class SistemaEntradaDados:
                 'categoria': self.campos_fornecedor['categoria'].get().upper(),
                 'tp_desp': self.campos_despesa['tp_desp'].get(),
                 'referencia': self.campos_despesa['referencia'].get().upper(),
+                'nf': self.campos_despesa['nf'].get().upper(),  # Novo campo
                 'vr_unit': f"{vr_unit:.2f}",
                 'dias': int(self.campos_despesa['dias'].get() or 1),
                 'valor': f"{valor:.2f}",
@@ -2299,6 +2314,7 @@ class SistemaEntradaDados:
         # Limpar todos os campos
         self.campos_despesa['tp_desp'].delete(0, tk.END)
         self.campos_despesa['referencia'].set('')  # Para Combobox
+        self.campos_despesa['nf'].delete(0, tk.END)  # Novo campo
         self.campos_despesa['vr_unit'].delete(0, tk.END)
         self.campos_despesa['dias'].delete(0, tk.END)
         self.campos_despesa['dias'].insert(0, '1')  # Valor padrão
@@ -2372,24 +2388,25 @@ class SistemaEntradaDados:
                 sheet.cell(row=proxima_linha, column=3, value=dados['cnpj_cpf'])
                 sheet.cell(row=proxima_linha, column=4, value=dados['nome'])
                 sheet.cell(row=proxima_linha, column=5, value=dados['referencia'])
+                sheet.cell(row=proxima_linha, column=6, value=dados['nf'])
 
-                vr_unit_cell = sheet.cell(row=proxima_linha, column=6, 
+                vr_unit_cell = sheet.cell(row=proxima_linha, column=7, 
                                         value=float(str(dados['vr_unit']).replace(',', '.')))
                 vr_unit_cell.number_format = '#,##0.00'
 
-                sheet.cell(row=proxima_linha, column=7, value=dados['dias'])
+                sheet.cell(row=proxima_linha, column=8, value=dados['dias'])
 
-                valor_cell = sheet.cell(row=proxima_linha, column=8, 
+                valor_cell = sheet.cell(row=proxima_linha, column=9, 
                                       value=float(str(dados['valor']).replace(',', '.')))
                 valor_cell.number_format = '#,##0.00'
 
                 dt_vencto = datetime.strptime(dados['dt_vencto'], '%d/%m/%Y')
-                dt_vencto_cell = sheet.cell(row=proxima_linha, column=9, value=dt_vencto)
+                dt_vencto_cell = sheet.cell(row=proxima_linha, column=10, value=dt_vencto)
                 dt_vencto_cell.number_format = 'DD/MM/YYYY'
 
-                sheet.cell(row=proxima_linha, column=10, value=dados['categoria'])
-                sheet.cell(row=proxima_linha, column=11, value=dados['dados_bancarios'])
-                sheet.cell(row=proxima_linha, column=12, value=dados['observacao'])
+                sheet.cell(row=proxima_linha, column=11, value=dados['categoria'])
+                sheet.cell(row=proxima_linha, column=12, value=dados['dados_bancarios'])
+                sheet.cell(row=proxima_linha, column=13, value=dados['observacao'])
 
             try:
                 # Tentar salvar o arquivo
@@ -2616,72 +2633,135 @@ class GestaoContratos:
         self.cliente_atual = cliente
         self.arquivo_cliente = PASTA_CLIENTES / f"{cliente}.xlsx"
         
-        janela = tk.Toplevel(self.parent)
-        janela.title(f"Gestão de Contratos - {cliente}")
-        janela.geometry("800x650")
+        try:
+            # Verificar se o arquivo existe
+            if not os.path.exists(self.arquivo_cliente):
+                messagebox.showerror("Erro", f"Arquivo do cliente {cliente} não encontrado!")
+                return
 
-        # Frame principal
-        frame_principal = ttk.Frame(janela, padding="10")
-        frame_principal.pack(fill='both', expand=True)
+            # Abrir arquivo e verificar aba
+            wb = load_workbook(self.arquivo_cliente)
+            if 'Contratos_ADM' not in wb.sheetnames:
+                # Se não existir a aba, criar
+                print(f"Criando aba Contratos_ADM para {cliente}")
+                ws = wb.create_sheet("Contratos_ADM")
+                
+                # Definir os blocos na linha 1
+                blocos = ["CONTRATOS", "", "", "", "", "",
+                         "ADMINISTRADORES_CONTRATO", "", "", "", "", "", "",
+                         "ADITIVOS", "", "", "",
+                         "ADMINISTRADORES_ADITIVO", "", "", "", "", "", "",
+                         "PARCELAS", "", "", "", ""]
+                
+                for col, valor in enumerate(blocos, 1):
+                    ws.cell(row=1, column=col, value=valor)
+                
+                # Definir cabeçalhos na linha 2
+                headers = [
+                    # CONTRATOS
+                    "Nº Contrato", "Data Início", "Data Fim", "Status", "Observações", "",
+                    # ADMINISTRADORES_CONTRATO
+                    "Nº Contrato", "CNPJ/CPF", "Nome/Razão Social", "Tipo", "Valor/Percentual", "Valor Total", "Nº Parcelas", 
+                    # ADITIVOS
+                    "Nº Contrato", "Nº Aditivo", "Data Início", "Data Fim",
+                    # ADMINISTRADORES_ADITIVO
+                    "Nº Contrato", "Nº Aditivo", "CNPJ/CPF", "Nome/Razão Social", "Tipo", "Valor/Percentual", "Valor Total",
+                    # PARCELAS
+                    "Referência", "Número", "CNPJ/CPF", "Nome", "Data Vencimento", "Valor", "Status", "Data Pagamento"
+                ]
+                
+                for col, header in enumerate(headers, 1):
+                    cell = ws.cell(row=2, column=col, value=header)
+                    cell.font = openpyxl.styles.Font(bold=True)
+                    cell.alignment = openpyxl.styles.Alignment(horizontal='center')
+                
+                # Ajustar largura das colunas
+                for col in range(1, len(headers) + 1):
+                    ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 15
+                
+                # Salvar as alterações
+                wb.save(self.arquivo_cliente)
 
-        # Frame para lista de contratos existentes
-        frame_contratos = ttk.LabelFrame(frame_principal, text="Contratos Existentes")
-        frame_contratos.pack(fill='both', expand=True, pady=5)
+            # Criar a janela principal
+            janela = tk.Toplevel(self.parent)
+            janela.title(f"Gestão de Contratos - {cliente}")
+            janela.geometry("800x650")
 
-        # Treeview para contratos
-        colunas = ('Nº Contrato', 'Data Início', 'Data Fim', 'Status')
-        self.tree_contratos = ttk.Treeview(frame_contratos, columns=colunas, show='headings')
-        for col in colunas:
-            self.tree_contratos.heading(col, text=col)
-            self.tree_contratos.column(col, width=100)
-        
-        # Adicionar scrollbars
-        scroll_y = ttk.Scrollbar(frame_contratos, orient='vertical', command=self.tree_contratos.yview)
-        scroll_x = ttk.Scrollbar(frame_contratos, orient='horizontal', command=self.tree_contratos.xview)
-        self.tree_contratos.configure(yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
-        
-        self.tree_contratos.pack(fill='both', expand=True, padx=5, pady=5)
-        scroll_y.pack(side='right', fill='y')
-        scroll_x.pack(side='bottom', fill='x')
+            # Frame principal
+            frame_principal = ttk.Frame(janela, padding="10")
+            frame_principal.pack(fill='both', expand=True)
 
-        # Frame para lista de administradores do contrato selecionado
-        frame_admins = ttk.LabelFrame(frame_principal, text="Administradores do Contrato")
-        frame_admins.pack(fill='both', expand=True, pady=5)
+            # Frame para lista de contratos existentes
+            frame_contratos = ttk.LabelFrame(frame_principal, text="Contratos Existentes")
+            frame_contratos.pack(fill='both', expand=True, pady=5)
 
-        # Treeview para administradores
-        colunas_adm = ('CNPJ/CPF', 'Nome', 'Tipo', 'Valor/Percentual', 'Valor Total', 'Nº Parcelas', 'Data Inicial Pagamento')
-        self.tree_adm_contrato = ttk.Treeview(frame_admins, columns=colunas_adm, show='headings')
-        for col in colunas_adm:
-            self.tree_adm_contrato.heading(col, text=col)
-            self.tree_adm_contrato.column(col, width=100)
-        
-        # Adicionar scrollbars para administradores
-        scroll_y_adm = ttk.Scrollbar(frame_admins, orient='vertical', command=self.tree_adm_contrato.yview)
-        scroll_x_adm = ttk.Scrollbar(frame_admins, orient='horizontal', command=self.tree_adm_contrato.xview)
-        self.tree_adm_contrato.configure(yscrollcommand=scroll_y_adm.set, xscrollcommand=scroll_x_adm.set)
-        
-        self.tree_adm_contrato.pack(fill='both', expand=True, padx=5, pady=5)
-        scroll_y_adm.pack(side='right', fill='y')
-        scroll_x_adm.pack(side='bottom', fill='x')
+            # Treeview para contratos
+            colunas = ('Nº Contrato', 'Data Início', 'Data Fim', 'Status')
+            self.tree_contratos = ttk.Treeview(frame_contratos, columns=colunas, show='headings')
+            for col in colunas:
+                self.tree_contratos.heading(col, text=col)
+                self.tree_contratos.column(col, width=100)
+            
+            # Adicionar scrollbars
+            scroll_y = ttk.Scrollbar(frame_contratos, orient='vertical', command=self.tree_contratos.yview)
+            scroll_x = ttk.Scrollbar(frame_contratos, orient='horizontal', command=self.tree_contratos.xview)
+            self.tree_contratos.configure(yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
+            
+            self.tree_contratos.pack(fill='both', expand=True, padx=5, pady=5)
+            scroll_y.pack(side='right', fill='y')
+            scroll_x.pack(side='bottom', fill='x')
 
-        # Botões de ação
-        frame_botoes = ttk.Frame(frame_principal)
-        frame_botoes.pack(fill='x', pady=5)
+            # Frame para lista de administradores do contrato selecionado
+            frame_admins = ttk.LabelFrame(frame_principal, text="Administradores do Contrato")
+            frame_admins.pack(fill='both', expand=True, pady=5)
 
-        ttk.Button(frame_botoes, text="Novo Contrato", 
-                  command=lambda: self.criar_novo_contrato(janela)).pack(side='left', padx=5)
-        ttk.Button(frame_botoes, text="Editar Contrato", 
-                  command=self.editar_contrato).pack(side='left', padx=5)
-        ttk.Button(frame_botoes, text="Excluir Contrato", 
-                  command=self.excluir_contrato).pack(side='left', padx=5)
-        ttk.Button(frame_botoes, text="Fechar", 
-                  command=janela.destroy).pack(side='right', padx=5)
+            # Treeview para administradores
+            colunas_adm = ('CNPJ/CPF', 'Nome', 'Tipo', 'Valor/Percentual', 'Valor Total', 'Nº Parcelas', 'Data Inicial Pagamento')
+            self.tree_adm_contrato = ttk.Treeview(frame_admins, columns=colunas_adm, show='headings')
+            for col in colunas_adm:
+                self.tree_adm_contrato.heading(col, text=col)
+                self.tree_adm_contrato.column(col, width=100)
+            
+            # Adicionar scrollbars para administradores
+            scroll_y_adm = ttk.Scrollbar(frame_admins, orient='vertical', command=self.tree_adm_contrato.yview)
+            scroll_x_adm = ttk.Scrollbar(frame_admins, orient='horizontal', command=self.tree_adm_contrato.xview)
+            self.tree_adm_contrato.configure(yscrollcommand=scroll_y_adm.set, xscrollcommand=scroll_x_adm.set)
+            
+            self.tree_adm_contrato.pack(fill='both', expand=True, padx=5, pady=5)
+            scroll_y_adm.pack(side='right', fill='y')
+            scroll_x_adm.pack(side='bottom', fill='x')
 
-        # Carregar contratos existentes
-        self.carregar_contratos()
+            # Botões de ação
+            frame_botoes = ttk.Frame(frame_principal)
+            frame_botoes.pack(fill='x', pady=5)
 
-        # Binding para atualizar administradores quando selecionar contrato
-        self.tree_contratos.bind('<<TreeviewSelect>>', self.mostrar_administradores)
+            ttk.Button(frame_botoes, text="Novo Contrato", 
+                      command=lambda: self.criar_novo_contrato(janela)).pack(side='left', padx=5)
+            ttk.Button(frame_botoes, text="Editar Contrato", 
+                      command=self.editar_contrato).pack(side='left', padx=5)
+            ttk.Button(frame_botoes, text="Excluir Contrato", 
+                      command=self.excluir_contrato).pack(side='left', padx=5)
+            ttk.Button(frame_botoes, text="Fechar", 
+                      command=janela.destroy).pack(side='right', padx=5)
+
+            # Carregar contratos existentes
+            self.carregar_contratos()
+
+            # Binding para atualizar administradores quando selecionar contrato
+            self.tree_contratos.bind('<<TreeviewSelect>>', self.mostrar_administradores)
+
+            # Centralizar a janela
+            janela.update_idletasks()
+            width = janela.winfo_width()
+            height = janela.winfo_height()
+            x = (janela.winfo_screenwidth() // 2) - (width // 2)
+            y = (janela.winfo_screenheight() // 2) - (height // 2)
+            janela.geometry(f'{width}x{height}+{x}+{y}')
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao abrir janela de contratos: {str(e)}")
+            if 'wb' in locals():
+                wb.close()
 
 
     def carregar_contratos(self):
@@ -2942,6 +3022,8 @@ class GestaoContratos:
         frame = ttk.Frame(janela, padding="10")
         frame.pack(fill='both', expand=True)
 
+        
+
         # Frame de busca
         frame_busca = ttk.LabelFrame(frame, text="Buscar Fornecedor")
         frame_busca.pack(fill='x', padx=5, pady=5)
@@ -3002,25 +3084,112 @@ class GestaoContratos:
         parcelas_entry = ttk.Entry(frame_fixo)
         parcelas_entry.grid(row=1, column=1, padx=5, pady=2)
 
-        # Valor por Parcela (calculado)
-        ttk.Label(frame_fixo, text="Valor por Parcela:").grid(row=2, column=0, padx=5, pady=2)
+        # Valor do Sinal/Entrada (novo campo)
+        ttk.Label(frame_fixo, text="Valor do Sinal/Entrada:").grid(row=2, column=0, padx=5, pady=2)
+        valor_entrada_entry = ttk.Entry(frame_fixo)
+        valor_entrada_entry.grid(row=2, column=1, padx=5, pady=2)
+        valor_entrada_entry.insert(0, "0.00")  # Valor padrão
+
+         # Valor por Parcela (calculado)
+        ttk.Label(frame_fixo, text="Valor por Parcela:").grid(row=3, column=0, padx=5, pady=2)
         valor_parcela_entry = ttk.Entry(frame_fixo, state='readonly')
-        valor_parcela_entry.grid(row=2, column=1, padx=5, pady=2)
+        valor_parcela_entry.grid(row=3, column=1, padx=5, pady=2)
 
         # Data Inicial de Pagamento
-        ttk.Label(frame_fixo, text="Data Inicial Pagamento:*").grid(row=3, column=0, padx=5, pady=2)
+        ttk.Label(frame_fixo, text="Data Inicial Pagamento:*").grid(row=4, column=0, padx=5, pady=2)
         data_inicial_pagto = DateEntry(frame_fixo, 
                                      width=20, 
                                      date_pattern='dd/mm/yyyy',
                                      locale='pt_BR')
-        data_inicial_pagto.grid(row=3, column=1, padx=5, pady=2)
+        data_inicial_pagto.grid(row=4, column=1, padx=5, pady=2)
         data_inicial_pagto.delete(0, tk.END)  # Remove a data padrão
+
+
+        def calcular_valor_parcela(*args):
+            try:
+                valor_total = float(valor_total_entry.get().replace(',', '.'))
+                valor_entrada = float(valor_entrada_entry.get().replace(',', '.') or "0")
+                
+                if valor_entrada >= valor_total:
+                    messagebox.showerror("Erro", "Valor do sinal não pode ser maior ou igual ao valor total!")
+                    valor_entrada_entry.delete(0, tk.END)
+                    valor_entrada_entry.insert(0, "0.00")
+                    return
+                    
+                valor_restante = valor_total - valor_entrada
+                num_parcelas = int(parcelas_entry.get())
+                
+                if num_parcelas <= 0:
+                    messagebox.showerror("Erro", "Número de parcelas deve ser maior que zero!")
+                    return
+                    
+                valor_parcela = valor_restante / num_parcelas
+                
+                valor_parcela_entry.config(state='normal')
+                valor_parcela_entry.delete(0, tk.END)
+                valor_parcela_entry.insert(0, f"{valor_parcela:.2f}")
+                valor_parcela_entry.config(state='readonly')
+                
+                # Atualiza o campo valor/percentual (que será o valor da parcela)
+                valor_entry.config(state='normal')
+                valor_entry.delete(0, tk.END)
+                valor_entry.insert(0, f"{valor_parcela:.2f}")
+                valor_entry.config(state='readonly')
+                
+            except ValueError:
+                valor_parcela_entry.config(state='normal')
+                valor_parcela_entry.delete(0, tk.END)
+                valor_parcela_entry.config(state='readonly')
+                valor_entry.config(state='normal')
+                valor_entry.delete(0, tk.END)
+                valor_entry.config(state='readonly')
+
+        def atualizar_campos_fixo(*args):
+            if tipo_combo.get() == 'Fixo':
+                frame_fixo.grid()
+                valor_entry.config(state='readonly')
+            else:
+                frame_fixo.grid_remove()
+                valor_entry.config(state='normal')
+                valor_entry.delete(0, tk.END)
+
+        def confirmar():
+            try:
+                # Validações
+                if not cnpj_cpf_entry.get() or not nome_entry.get():
+                    messagebox.showerror("Erro", "Selecione um fornecedor!")
+                    return
+
+                if not tipo_combo.get():
+                    messagebox.showerror("Erro", "Selecione o tipo!")
+                    return
+
+                if not valor_entry.get():
+                    messagebox.showerror("Erro", "Informe o valor/percentual!")
+                    return
+
+                # Adicionar à tree original
+                valores = (
+                    cnpj_cpf_entry.get(),
+                    nome_entry.get(),
+                    tipo_combo.get(),
+                    valor_entry.get(),
+                    valor_total_entry.get() if tipo_combo.get() == 'Fixo' else '',
+                    parcelas_entry.get() if tipo_combo.get() == 'Fixo' else '',
+                    data_inicial_pagto.get() if tipo_combo.get() == 'Fixo' else ''
+                )
+                tree.insert('', 'end', values=valores)
+                janela.destroy()
+
+            except Exception as e:
+                messagebox.showerror("Erro", f"Erro ao confirmar: {str(e)}")
 
         # Configurar eventos
         valor_total_entry.bind('<KeyRelease>', calcular_valor_parcela)
         parcelas_entry.bind('<KeyRelease>', calcular_valor_parcela)
+        valor_entrada_entry.bind('<KeyRelease>', calcular_valor_parcela)
         tipo_combo.bind('<<ComboboxSelected>>', atualizar_campos_fixo)
-        
+
         # Frame para botões no final
         frame_botoes = ttk.Frame(frame)
         frame_botoes.pack(fill='x', pady=10)
@@ -3036,16 +3205,7 @@ class GestaoContratos:
 
         # Adicionar botão de busca no frame_busca
         ttk.Button(frame_busca, text="Buscar", command=busca_local).pack(side='left', padx=5)
-        
-        # Adicionar bind para a tecla Enter
         busca_entry.bind('<Return>', lambda e: busca_local())
-        
-        def selecionar(event=None):
-            campos_tmp = {
-                'cnpj_cpf': cnpj_cpf_entry,
-                'nome': nome_entry
-            }
-            selecionar_fornecedor(tree_fornecedores, campos_tmp)
 
         def selecionar_e_preencher(event=None):
             selecionado = tree_fornecedores.selection()
@@ -3068,122 +3228,104 @@ class GestaoContratos:
             nome_entry.config(state='readonly')
 
         # Adicionar binding para duplo clique
-        tree_fornecedores.bind('<Double-1>', selecionar_e_preencher)            
+        tree_fornecedores.bind('<Double-1>', selecionar_e_preencher)           
 
-        def calcular_valor_parcela(*args):
-            try:
-                valor_total = float(valor_total_entry.get().replace(',', '.'))
-                num_parcelas = int(parcelas_entry.get())
-                
-                if num_parcelas <= 0:
-                    messagebox.showerror("Erro", "Número de parcelas deve ser maior que zero!")
-                    return
-                    
-                valor_parcela = valor_total / num_parcelas
-                
-                valor_parcela_entry.config(state='normal')
-                valor_parcela_entry.delete(0, tk.END)
-                valor_parcela_entry.insert(0, f"{valor_parcela:.2f}")
-                valor_parcela_entry.config(state='readonly')
-                
-                valor_entry.delete(0, tk.END)
-                valor_entry.insert(0, f"{valor_parcela:.2f}")
-                
-            except ValueError:
-                valor_parcela_entry.config(state='normal')
-                valor_parcela_entry.delete(0, tk.END)
-                valor_parcela_entry.config(state='readonly')
-                valor_entry.delete(0, tk.END)
-
-        # Reconectar eventos para cálculo
-        valor_total_entry.bind('<KeyRelease>', calcular_valor_parcela)
-        parcelas_entry.bind('<KeyRelease>', calcular_valor_parcela)
+        
 
 
-        def atualizar_campos_fixo(*args):
-            if tipo_combo.get() == 'Fixo':
-                frame_fixo.grid()
-                valor_entry.config(state='readonly')
-            else:
-                frame_fixo.grid_remove()
-                valor_entry.config(state='normal')
-                valor_entry.delete(0, tk.END)
+    def salvar_contrato(self, num_contrato, data_inicio, data_fim, observacoes, janela):
+        """Salva os dados do contrato e seus administradores"""
+        if not num_contrato or not data_inicio or not data_fim:
+            messagebox.showerror("Erro", "Preencha todos os campos obrigatórios!")
+            return
 
-        def salvar_contrato(self, num_contrato, data_inicio, data_fim, observacoes, janela):
-            if not num_contrato or not data_inicio or not data_fim:
-                messagebox.showerror("Erro", "Preencha todos os campos obrigatórios!")
+        try:
+            if not self.tree_adm.get_children():
+                messagebox.showerror("Erro", "Adicione pelo menos um administrador!")
                 return
 
-            try:
-                if not self.tree_adm.get_children():
-                    messagebox.showerror("Erro", "Adicione pelo menos um administrador!")
+            wb = load_workbook(self.arquivo_cliente)
+            ws = wb['Contratos_ADM']
+
+            # Verificar se o contrato já existe
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                if row[0] == num_contrato:
+                    messagebox.showerror("Erro", "Número de contrato já existe!")
                     return
 
-                wb = load_workbook(self.arquivo_cliente)
-                ws = wb['Contratos_ADM']
+            # Salvar dados do contrato
+            proxima_linha = ws.max_row + 1
+            ws.cell(row=proxima_linha, column=1, value=num_contrato)
+            ws.cell(row=proxima_linha, column=2, value=data_inicio)
+            ws.cell(row=proxima_linha, column=3, value=data_fim)
+            ws.cell(row=proxima_linha, column=4, value='ATIVO')
+            ws.cell(row=proxima_linha, column=5, value=observacoes)
 
-                # Salvar dados do contrato
+            # Salvar administradores
+            for item in self.tree_adm.get_children():
+                valores = self.tree_adm.item(item)['values']
                 proxima_linha = ws.max_row + 1
-                ws.cell(row=proxima_linha, column=1, value=num_contrato)
-                ws.cell(row=proxima_linha, column=2, value=data_inicio)
-                ws.cell(row=proxima_linha, column=3, value=data_fim)
-                ws.cell(row=proxima_linha, column=4, value='ATIVO')
-                ws.cell(row=proxima_linha, column=5, value=observacoes)
-
-                # Salvar administradores e gerar parcelas quando aplicável
-                for item in self.tree_adm.get_children():
-                    valores = self.tree_adm.item(item)['values']
+                
+                # Formatação do CNPJ/CPF
+                cnpj_cpf = str(valores[0]).strip()
+                cnpj_cpf = formatar_cnpj_cpf(cnpj_cpf)
+                nome_admin = valores[1]  # Nome do administrador
+                
+                ws.cell(row=proxima_linha, column=7, value=num_contrato)  # Nº Contrato
+                ws.cell(row=proxima_linha, column=8, value=cnpj_cpf)      # CNPJ/CPF
+                ws.cell(row=proxima_linha, column=9, value=valores[1])    # Nome
+                ws.cell(row=proxima_linha, column=10, value=valores[2])   # Tipo
+                ws.cell(row=proxima_linha, column=11, value=valores[3])   # Valor/Percentual
+                
+                # Se for do tipo Fixo, salvar valor total e número de parcelas
+                if valores[2] == 'Fixo':
+                    ws.cell(row=proxima_linha, column=12, value=valores[4])  # Valor Total
+                    ws.cell(row=proxima_linha, column=13, value=valores[5])  # Nº Parcelas
                     
-                    proxima_linha = ws.max_row + 1
-                    cnpj_cpf = str(valores[0]).strip()
-                    cnpj_cpf = formatar_cnpj_cpf(cnpj_cpf)
-                    
-                    ws.cell(row=proxima_linha, column=7, value=num_contrato)  # G
-                    ws.cell(row=proxima_linha, column=8, value=cnpj_cpf)      # H
-                    ws.cell(row=proxima_linha, column=9, value=valores[1])    # I
-                    ws.cell(row=proxima_linha, column=10, value=valores[2])   # J
-                    ws.cell(row=proxima_linha, column=11, value=valores[3])   # K
-                    ws.cell(row=proxima_linha, column=12, value=valores[4])   # L
-                    ws.cell(row=proxima_linha, column=13, value=valores[5])   # M
-
-                    # Se for taxa fixa, gerar parcelas
-                    if valores[2] == 'Fixo' and valores[5]:
+                    # Se tiver parcelas definidas, criar registros de parcelas
+                    if valores[5]:
                         try:
                             num_parcelas = int(valores[5])
-                            valor_total = float(str(valores[4]).replace(',', '.'))
                             valor_parcela = float(str(valores[3]).replace(',', '.'))
-                            data_inicial = datetime.strptime(valores[6], '%d/%m/%Y')
-
+                            data_inicial = datetime.strptime(valores[6], '%d/%m/%Y') if valores[6] else data_inicio
+                            
                             for i in range(num_parcelas):
                                 proxima_linha = ws.max_row + 1
                                 
                                 # Calcular data de vencimento
-                                if i > 0:
-                                    if data_inicial.month == 12:
-                                        data_inicial = data_inicial.replace(year=data_inicial.year + 1, month=1, day=5)
-                                    else:
-                                        data_inicial = data_inicial.replace(month=data_inicial.month + 1, day=5)
+                                if data_inicial.month + i > 12:
+                                    ano = data_inicial.year + ((data_inicial.month + i - 1) // 12)
+                                    mes = ((data_inicial.month + i - 1) % 12) + 1
+                                else:
+                                    ano = data_inicial.year
+                                    mes = data_inicial.month + i
                                 
-                                # Salvar parcela
-                                ws.cell(row=proxima_linha, column=23, value=num_contrato)   # W
-                                ws.cell(row=proxima_linha, column=24, value=i + 1)          # X
-                                ws.cell(row=proxima_linha, column=25, value=cnpj_cpf)       # Y
-                                ws.cell(row=proxima_linha, column=26, value=data_inicial)   # Z
-                                ws.cell(row=proxima_linha, column=27, value=valor_parcela)  # AA
-                                ws.cell(row=proxima_linha, column=28, value='PENDENTE')     # AB
+                                data_vencto = data_inicial.replace(year=ano, month=mes, day=5)
+                                
+                                # Registrar parcela
+                                ws.cell(row=proxima_linha, column=25, value=num_contrato)  # Nº Contrato
+                                ws.cell(row=proxima_linha, column=26, value=i + 1)         # Número da parcela
+                                ws.cell(row=proxima_linha, column=27, value=cnpj_cpf)      # CNPJ/CPF
+                                ws.cell(row=proxima_linha, column=28, value=nome_admin)    # Nome
+                                ws.cell(row=proxima_linha, column=29, value=data_vencto)   # Data vencimento
+                                ws.cell(row=proxima_linha, column=30, value=valor_parcela) # Valor
+                                ws.cell(row=proxima_linha, column=31, value='PENDENTE')    # Status
+                                
+                        except (ValueError, TypeError) as e:
+                            messagebox.showwarning(
+                                "Aviso", 
+                                f"Erro ao processar parcelas para {valores[1]}: {str(e)}"
+                            )
 
-                        except (ValueError, IndexError) as e:
-                            messagebox.showerror("Erro", f"Erro ao processar parcelas para {valores[1]}: {str(e)}")
-                            continue
+            wb.save(self.arquivo_cliente)
+            messagebox.showinfo("Sucesso", "Contrato cadastrado com sucesso!")
+            janela.destroy()
+            self.carregar_contratos()  # Atualizar lista de contratos
 
-                wb.save(self.arquivo_cliente)
-                messagebox.showinfo("Sucesso", "Contrato cadastrado com sucesso!")
-                janela.destroy()
-
-            except Exception as e:
-                messagebox.showerror("Erro", f"Erro ao salvar contrato: {str(e)}")
-
-        
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao salvar contrato: {str(e)}")
+            if 'wb' in locals():
+                wb.close()   
                 
 
     def excluir_contrato(self):
@@ -3271,10 +3413,10 @@ class GestaoTaxasFixas:
         """Verifica se já existe lançamento para o período"""
         data_str = data_ref.strftime("%d/%m/%Y")
         for row in ws.iter_rows(min_row=3, values_only=True):
-            if (row[22] and  # Tem referência na coluna PARCELAS
-                row[23] == num_contrato and  # Mesmo contrato
-                row[24] == cnpj_cpf and  # Mesmo CNPJ/CPF
-                row[25] == data_str):  # Mesma data
+            if (row[25] and  # Tem referência na coluna PARCELAS
+                row[24] == num_contrato and  # Mesmo contrato
+                row[26] == cnpj_cpf and  # Mesmo CNPJ/CPF
+                row[28] == data_str):  # Mesma data
                 return True
         return False
 
@@ -3292,11 +3434,11 @@ class GestaoTaxasFixas:
     def registrar_lancamento(self, ws, dados):
         """Registra o lançamento na aba de controle"""
         proxima_linha = ws.max_row + 1
-        ws.cell(row=proxima_linha, column=23, value=dados['cnpj_cpf'])
-        ws.cell(row=proxima_linha, column=24, value=dados['nome'])
-        ws.cell(row=proxima_linha, column=25, value=dados['data_rel'])
-        ws.cell(row=proxima_linha, column=26, value=dados['valor'])
-        ws.cell(row=proxima_linha, column=27, value='LANÇADO')
+        ws.cell(row=proxima_linha, column=26, value=dados['cnpj_cpf'])
+        ws.cell(row=proxima_linha, column=27, value=dados['nome'])
+        ws.cell(row=proxima_linha, column=28, value=dados['data_rel'])
+        ws.cell(row=proxima_linha, column=29, value=dados['valor'])
+        ws.cell(row=proxima_linha, column=30, value='LANÇADO')
 
 
 class GestaoAdministradores:
@@ -3458,13 +3600,557 @@ class GestorParcelas:
         self.tipo_despesa_valor = '3'
         self.janela_parcelas = None
         self._var_tem_entrada = None  # Inicializa como None
-        
+        # Limpar referências de widgets
+        self.frame_modalidade = None
+        self.frame_valor_entrada = None
+        self.lbl_entrada = None
+        self.valor_entrada = None
+        self.modalidade_entrada = None
+
     @property
     def tem_entrada(self):
         """Getter para tem_entrada - cria apenas quando necessário"""
         if self._var_tem_entrada is None:
             self._var_tem_entrada = tk.BooleanVar(master=self.parent.root, value=False)
         return self._var_tem_entrada
+
+
+    # Interface e Controles
+    def abrir_janela_parcelas(self):
+        print("Abrindo janela de parcelas")  # Debug
+        # Criar janela como Toplevel do parent
+        self.janela_parcelas = tk.Toplevel(self.parent.root)
+        self.janela_parcelas.title("Configuração de Parcelas")
+        self.janela_parcelas.geometry("600x700")
+        
+        # Garantir que a janela seja modal
+        self.janela_parcelas.transient(self.parent.root)
+        self.janela_parcelas.grab_set()
+        
+        frame = ttk.Frame(self.janela_parcelas, padding="10")
+        frame.pack(fill='both', expand=True)
+
+        # Frame para entrada
+        frame_entrada = ttk.LabelFrame(frame, text="Entrada")
+        frame_entrada.grid(row=0, column=0, columnspan=2, sticky='ew', padx=5, pady=5)
+        
+        print("Criando Checkbutton")  # Debug
+        check = ttk.Checkbutton(
+            frame_entrada, 
+            text="Possui entrada?",
+            variable=self.tem_entrada,
+            command=self.atualizar_campos_entrada
+        )
+        check.grid(row=0, column=0, padx=5, pady=5)
+
+        # Frame para modalidades de entrada
+        print("Criando frame modalidade")  # Debug
+        self.frame_modalidade = ttk.Frame(frame_entrada)
+        self.frame_modalidade.grid(row=1, column=0, columnspan=2, sticky='ew', padx=5, pady=5)
+        
+        ttk.Label(self.frame_modalidade, text="Modalidade de Entrada:").grid(row=0, column=0, padx=5, pady=2)
+        self.modalidade_entrada = ttk.Combobox(self.frame_modalidade, state='readonly', width=40)
+        self.modalidade_entrada['values'] = [
+            "Percentual do valor total na primeira parcela",
+            "Primeira parcela igual às demais (arredonda no final)",
+            "Valor específico na primeira parcela"
+        ]
+        self.modalidade_entrada.grid(row=0, column=1, padx=5, pady=2)
+        
+
+        # Garantir que o frame modalidade começa oculto
+        print("Ocultando frame modalidade inicialmente")  # Debug
+        self.frame_modalidade.grid_remove()
+        
+        # Frame para valor da entrada (dinâmico baseado na modalidade)
+        self.frame_valor_entrada = ttk.Frame(frame_entrada)
+        self.frame_valor_entrada.grid(row=2, column=0, columnspan=2, sticky='ew', padx=5, pady=5)
+        
+        # Ocultar frames inicialmente
+        self.frame_modalidade.grid_remove()
+        self.frame_valor_entrada.grid_remove()
+        
+        # Tipo de Despesa
+        ttk.Label(frame, text="Tipo de Despesa:").grid(row=1, column=0, padx=5, pady=5)
+        self.tipo_despesa = ttk.Combobox(frame, values=['2', '3'], state='readonly', width=5)
+        self.tipo_despesa.grid(row=1, column=1, sticky='w', padx=5, pady=5)
+        self.tipo_despesa.set('3')  # Tipo 3 como padrão
+
+        # Tipo de Parcelamento
+        ttk.Label(frame, text="Tipo de Parcelamento:").grid(row=2, column=0, padx=5, pady=5)
+        self.tipo_parcelamento = ttk.Combobox(frame, values=[
+            "Prazo Fixo em Dias",
+            "Datas Específicas",
+            "Cartão de Crédito"
+        ], state="readonly")
+        self.tipo_parcelamento.grid(row=2, column=1, padx=5, pady=5)
+        self.tipo_parcelamento.set("Prazo Fixo em Dias")
+        self.tipo_parcelamento.bind('<<ComboboxSelected>>', self.atualizar_campos_parcelamento)
+
+        # Frame para campos dinâmicos
+        self.frame_dinamico = ttk.Frame(frame)
+        self.frame_dinamico.grid(row=3, column=0, columnspan=2, pady=10)
+
+        # Campos comuns
+        ttk.Label(frame, text="Data da Despesa:").grid(row=4, column=0, padx=5, pady=5)
+        self.data_despesa = DateEntry(
+            frame,
+            format='dd/mm/yyyy',
+            locale='pt_BR',
+            background='darkblue',
+            foreground='white',
+            borderwidth=2
+        )
+        
+        self.data_despesa.grid(row=4, column=1, padx=5, pady=5)
+        self.data_despesa.configure(state='normal')
+        self.configurar_calendario(self.data_despesa)
+
+        ttk.Label(frame, text="Valor Original:").grid(row=5, column=0, padx=5, pady=5)
+        self.valor_original = ttk.Entry(frame)
+        self.valor_original.grid(row=5, column=1, padx=5, pady=5)
+
+        # Alterar o label do número de parcelas para ser mais claro
+        if self.tem_entrada.get():
+            ttk.Label(frame, text="Número de Parcelas (além da entrada):").grid(row=6, column=0, padx=5, pady=5)
+        else:
+            ttk.Label(frame, text="Número de Parcelas:").grid(row=6, column=0, padx=5, pady=5)
+        self.num_parcelas = ttk.Entry(frame)
+        self.num_parcelas.grid(row=6, column=1, padx=5, pady=5)
+
+        # Adicionar um label informativo
+        self.lbl_info_parcelas = ttk.Label(frame, text="")
+        self.lbl_info_parcelas.grid(row=7, column=0, columnspan=2, padx=5, pady=2)
+
+        # Frame específico para informação sobre parcelas
+        frame_info_parcelas = ttk.Frame(frame)
+        frame_info_parcelas.grid(row=7, column=0, columnspan=2, padx=5, pady=5, sticky='ew')
+        
+        self.lbl_info_parcelas = ttk.Label(
+            frame_info_parcelas, 
+            text="",
+            wraplength=500,  # Permitir quebra de linha se necessário
+            justify='center'
+        )
+        self.lbl_info_parcelas.pack(fill='x', padx=5)
+
+        # Referência Base (já existe)
+        ttk.Label(frame, text="Referência Base:").grid(row=8, column=0, padx=5, pady=5)
+        self.referencia_base = ttk.Entry(frame)
+        self.referencia_base.grid(row=8, column=1, padx=5, pady=5, sticky='ew')
+
+        # Adicionar campo NF
+        ttk.Label(frame, text="NF:").grid(row=9, column=0, padx=5, pady=5)
+        self.campos_nf = ttk.Entry(frame)
+        self.campos_nf.grid(row=9, column=1, padx=5, pady=5, sticky='ew')
+
+    
+
+        # Botões
+        frame_botoes = ttk.Frame(frame)
+        frame_botoes.grid(row=11, column=0, columnspan=2, pady=20)
+
+        ttk.Button(frame_botoes, 
+                  text="Gerar Parcelas", 
+                  command=self.gerar_parcelas).pack(side='left', padx=5)
+        ttk.Button(frame_botoes, 
+                  text="Cancelar", 
+                  command=self.cancelar_parcelamento).pack(side='left', padx=5)
+
+        # Inicializar campos do tipo padrão
+        self.atualizar_campos_parcelamento(None)
+
+        # Fazer a janela modal
+        self.janela_parcelas.transient(self.parent.root)
+        self.janela_parcelas.grab_set()
+
+        # Centralizar a janela
+        self.janela_parcelas.update_idletasks()
+        width = self.janela_parcelas.winfo_width()
+        height = self.janela_parcelas.winfo_height()
+        x = (self.janela_parcelas.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.janela_parcelas.winfo_screenheight() // 2) - (height // 2)
+        self.janela_parcelas.geometry(f'{width}x{height}+{x}+{y}')
+
+
+    def atualizar_campos_entrada(self):
+        """Mostra/oculta campos relacionados à entrada e atualiza labels"""
+        if self.tem_entrada.get():
+            # Mostrar frame modalidade
+            if self.frame_modalidade:
+                self.frame_modalidade.grid()
+                
+                # Criar campos se não existirem
+                if not hasattr(self, 'valor_entrada') or not self.valor_entrada:
+                    if not self.frame_valor_entrada:
+                        self.frame_valor_entrada = ttk.Frame(self.frame_modalidade)
+                        self.frame_valor_entrada.grid(row=1, column=0, columnspan=2, sticky='ew', padx=5, pady=5)
+                    
+                    self.lbl_entrada = ttk.Label(self.frame_valor_entrada, text="Valor:")
+                    self.lbl_entrada.grid(row=0, column=0, padx=5, pady=2)
+                    
+                    self.valor_entrada = ttk.Entry(self.frame_valor_entrada)
+                    self.valor_entrada.grid(row=0, column=1, padx=5, pady=2)
+                
+                if self.frame_valor_entrada:
+                    self.frame_valor_entrada.grid()
+        else:
+            # Ocultar frames
+            if self.frame_modalidade:
+                self.frame_modalidade.grid_remove()
+            if self.frame_valor_entrada:
+                self.frame_valor_entrada.grid_remove()
+            
+            # Restaurar label original
+            for widget in self.janela_parcelas.winfo_children():
+                if isinstance(widget, ttk.Label) and widget.cget("text").startswith("Número de Parcelas"):
+                    widget.config(text="Número de Parcelas:")
+            self.lbl_info_parcelas.config(text="")
+
+    def atualizar_campos_modalidade(self, event=None):
+        """Atualiza campos baseado na modalidade selecionada"""
+        modalidade = self.modalidade_entrada.get()
+        
+        if not hasattr(self, 'frame_valor_entrada') or not hasattr(self, 'lbl_entrada'):
+            return
+            
+        self.frame_valor_entrada.grid()
+        
+        if modalidade == "Percentual do valor total na primeira parcela":
+            self.lbl_entrada.config(text="Percentual (%): ")
+            self.valor_entrada.delete(0, tk.END)
+        elif modalidade == "Primeira parcela igual às demais (arredonda no final)":
+            self.frame_valor_entrada.grid_remove()
+        elif modalidade == "Valor específico na primeira parcela":
+            self.lbl_entrada.config(text="Valor (R$): ")
+            self.valor_entrada.delete(0, tk.END)
+            
+    def atualizar_campos_parcelamento(self, event):
+        # Limpar frame dinâmico
+        for widget in self.frame_dinamico.winfo_children():
+            widget.destroy()
+
+        tipo = self.tipo_parcelamento.get()
+        
+        if tipo == "Prazo Fixo em Dias":
+            ttk.Label(self.frame_dinamico, text="Prazo entre Parcelas (dias):").grid(row=0, column=0, padx=5, pady=5)
+            self.prazo_dias = ttk.Entry(self.frame_dinamico)
+            self.prazo_dias.grid(row=0, column=1, padx=5, pady=5)
+            self.prazo_dias.insert(0, "30")  # Valor padrão
+
+        elif tipo == "Datas Específicas":
+            num_parcelas_txt = "parcelas após a entrada" if self.tem_entrada.get() else "parcelas"
+            
+            ttk.Label(self.frame_dinamico, 
+                     text=f"Informe as datas de vencimento das {num_parcelas_txt}:").grid(
+                         row=0, column=0, columnspan=2, padx=5, pady=5)
+            
+            self.texto_datas = tk.Text(self.frame_dinamico, height=4, width=30)
+            self.texto_datas.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
+            
+            ttk.Label(self.frame_dinamico, 
+                     text="Digite uma data por linha no formato dd/mm/aaaa\n"
+                          "(não inclua a data da entrada)").grid(
+                         row=2, column=0, columnspan=2, padx=5, pady=5)
+
+        elif tipo == "Cartão de Crédito":
+            ttk.Label(self.frame_dinamico, text="Dia do Vencimento:").grid(row=0, column=0, padx=5, pady=5)
+            self.dia_vencimento = ttk.Entry(self.frame_dinamico, width=5)
+            self.dia_vencimento.grid(row=0, column=1, padx=5, pady=5)
+            self.dia_vencimento.insert(0, "10")  # Valor padrão
+
+
+    # Métodos de geração e validação de parcelas
+    def validar_dados_entrada(self, valor_original, num_parcelas, referencia_base, tipo):
+        """Valida os dados básicos antes de gerar parcelas"""
+        if not referencia_base or num_parcelas <= 0:
+            messagebox.showerror("Erro", "Preencha todos os campos obrigatórios!")
+            return False
+
+        # Validações específicas por tipo de parcelamento
+        if tipo == "Prazo Fixo em Dias":
+            if not hasattr(self, 'prazo_dias') or not self.prazo_dias.get():
+                messagebox.showerror("Erro", "Informe o prazo entre as parcelas!")
+                return False
+        elif tipo == "Datas Específicas":
+            if not hasattr(self, 'texto_datas'):
+                messagebox.showerror("Erro", "Configure as datas específicas!")
+                return False
+        elif tipo == "Cartão de Crédito":
+            if not hasattr(self, 'dia_vencimento') or not self.dia_vencimento.get():
+                messagebox.showerror("Erro", "Informe o dia do vencimento!")
+                return False
+            try:
+                dia_vencimento = int(self.dia_vencimento.get())
+                if not (1 <= dia_vencimento <= 31):
+                    messagebox.showerror("Erro", "Dia de vencimento deve estar entre 1 e 31!")
+                    return False
+            except ValueError:
+                messagebox.showerror("Erro", "Dia de vencimento inválido!")
+                return False
+
+        return True
+
+    def gerar_parcelas(self):
+        """Método principal para gerar parcelas"""
+        try:
+            # Coletar dados básicos
+            self.tipo_despesa_valor = self.tipo_despesa.get()
+            valor_original = float(self.valor_original.get().replace(',', '.'))
+            num_parcelas = int(self.num_parcelas.get())
+            referencia_base = self.referencia_base.get().strip()
+            nf = self.campos_nf.get().strip()
+            tipo = self.tipo_parcelamento.get()
+
+            # Validar dados
+            if not self.validar_dados_entrada(valor_original, num_parcelas, referencia_base, tipo):
+                return False
+
+            # Data base é a data da despesa
+            data_base = datetime.strptime(self.data_despesa.get(), '%d/%m/%Y')
+            
+            # Limpar lista de parcelas anterior
+            self.parcelas = []
+
+            # Calcular valores das parcelas
+            valores_parcelas = self.calcular_valores_parcelas(valor_original, num_parcelas)
+            if not valores_parcelas:
+                return False
+
+            # Gerar parcelas conforme o tipo
+            if tipo == "Prazo Fixo em Dias":
+                self.gerar_parcelas_prazo_fixo(data_base, valores_parcelas, referencia_base, num_parcelas, nf)
+            elif tipo == "Datas Específicas":
+                self.gerar_parcelas_datas_especificas(data_base, valores_parcelas, referencia_base, num_parcelas, nf)
+            elif tipo == "Cartão de Crédito":
+                self.gerar_parcelas_cartao(data_base, valores_parcelas, referencia_base, num_parcelas, nf)
+
+            if self.parcelas:
+                messagebox.showinfo("Sucesso", f"{len(self.parcelas)} parcela(s) gerada(s) com sucesso!")
+                self.limpar_campos()
+                return True
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao gerar parcelas: {str(e)}")
+            return False
+
+    def adicionar_parcela(self, data_rel, dt_vencto, valor_parcela, referencia_base, i, num_parcelas, eh_primeira_parcela, nf):
+        """
+        Método auxiliar para criar uma parcela com todos os dados necessários
+        """
+        parcela = {
+            'data_rel': data_rel.strftime('%d/%m/%Y'),
+            'dt_vencto': dt_vencto.strftime('%d/%m/%Y'),
+            'valor': valor_parcela,
+            'referencia': self.gerar_referencia_parcela(referencia_base, i, num_parcelas, eh_primeira_parcela),
+            'nf': nf
+        }
+        self.parcelas.append(parcela)
+
+    def gerar_parcelas_prazo_fixo(self, data_base, valores_parcelas, referencia_base, num_parcelas, nf):
+        """Gera parcelas com prazo fixo em dias"""
+        prazo_dias = int(self.prazo_dias.get())
+        
+        for i, valor_parcela in enumerate(valores_parcelas):
+            eh_primeira_parcela = (i == 0)
+            
+            if eh_primeira_parcela and self.tem_entrada.get():
+                dt_vencto = data_base
+                data_rel = self.calcular_data_rel(data_base, dt_vencto, True)
+            else:
+                dt_vencto = data_base + relativedelta(days=prazo_dias * (i + (0 if self.tem_entrada.get() else 1)))
+                dt_vencto = self.proximo_dia_util(dt_vencto)
+                data_rel = self.calcular_data_rel(data_base, dt_vencto, eh_primeira_parcela)
+            
+            self.adicionar_parcela(
+                data_rel,
+                dt_vencto,
+                valor_parcela,
+                referencia_base,
+                i,
+                num_parcelas,
+                eh_primeira_parcela,
+                nf
+            )
+
+    def gerar_parcelas_datas_especificas(self, data_base, valores_parcelas, referencia_base, num_parcelas, nf):
+        """Gera parcelas com datas específicas"""
+        datas_texto = self.texto_datas.get("1.0", tk.END).strip().split('\n')
+        datas_texto = [d.strip() for d in datas_texto if d.strip()]
+        
+        num_datas_esperado = num_parcelas
+        if len(datas_texto) != num_datas_esperado:
+            messagebox.showerror(
+                "Erro", 
+                f"Para {num_parcelas} {'parcelas após a entrada' if self.tem_entrada.get() else 'parcelas'}, "
+                f"é necessário informar {num_datas_esperado} data(s) de vencimento."
+            )
+            return
+
+        for i, valor_parcela in enumerate(valores_parcelas):
+            eh_primeira_parcela = (i == 0)
+            
+            try:
+                if eh_primeira_parcela and self.tem_entrada.get():
+                    dt_vencto = data_base
+                    data_rel = self.calcular_data_rel(data_base, dt_vencto, True)
+                else:
+                    idx_data = i - 1 if self.tem_entrada.get() else i
+                    if 0 <= idx_data < len(datas_texto):
+                        dt_vencto = datetime.strptime(datas_texto[idx_data], '%d/%m/%Y')
+                        dt_vencto = self.proximo_dia_util(dt_vencto)
+                        data_rel = self.calcular_data_rel(data_base, dt_vencto, eh_primeira_parcela)
+                    else:
+                        raise ValueError(f"Índice de data inválido: {idx_data}")
+                
+                self.adicionar_parcela(
+                    data_rel,
+                    dt_vencto,
+                    valor_parcela,
+                    referencia_base,
+                    i,
+                    num_parcelas,
+                    eh_primeira_parcela,
+                    nf
+                )
+                
+            except ValueError as e:
+                messagebox.showerror("Erro", f"Erro ao processar data: {str(e)}")
+                return
+            except IndexError:
+                messagebox.showerror("Erro", "Número insuficiente de datas fornecidas")
+                return
+
+    def gerar_parcelas_cartao(self, data_base, valores_parcelas, referencia_base, num_parcelas, nf):
+        """Gera parcelas para pagamento com cartão"""
+        dia_vencimento = int(self.dia_vencimento.get())
+        
+        for i, valor_parcela in enumerate(valores_parcelas):
+            eh_primeira_parcela = (i == 0)
+            
+            if eh_primeira_parcela:
+                data_atual = data_base + relativedelta(months=1)
+            else:
+                data_atual = data_base + relativedelta(months=i + 1)
+            
+            try:
+                dt_vencto = data_atual.replace(day=dia_vencimento)
+            except ValueError:
+                dt_vencto = data_atual + relativedelta(day=31)
+            
+            dt_vencto = self.proximo_dia_util(dt_vencto)
+            
+            if eh_primeira_parcela:
+                hoje = datetime.now()
+                if hoje.day <= 5:
+                    data_rel = hoje.replace(day=5)
+                elif hoje.day <= 20:
+                    data_rel = hoje.replace(day=20)
+                else:
+                    proximo_mes = hoje + relativedelta(months=1)
+                    data_rel = proximo_mes.replace(day=5)
+            else:
+                data_rel = self.calcular_data_rel(data_base, dt_vencto, False)
+                
+            self.adicionar_parcela(
+                data_rel,
+                dt_vencto,
+                valor_parcela,
+                referencia_base,
+                i,
+                num_parcelas,
+                eh_primeira_parcela,
+                nf
+            )
+
+
+    # Métodos de cálculo e utilitários
+    def calcular_valores_parcelas(self, valor_original, num_parcelas):
+        """Calcula os valores das parcelas considerando entrada se houver"""
+        try:
+            if self.tem_entrada.get():
+                if not self.modalidade_entrada.get():
+                    messagebox.showerror("Erro", "Selecione a modalidade de entrada!")
+                    return None
+                valores_parcelas = self.calcular_parcelas_entrada(valor_original, num_parcelas)
+            else:
+                valores_parcelas = self.calcular_parcelas_ajustadas(valor_original, num_parcelas)
+
+            # Verificar se a soma está correta
+            soma_parcelas = sum(valores_parcelas)
+            if abs(soma_parcelas - valor_original) > 0.01:
+                messagebox.showerror(
+                    "Erro", 
+                    f"Erro no cálculo das parcelas: soma ({soma_parcelas:.2f}) " 
+                    f"diferente do valor original ({valor_original:.2f})!"
+                )
+                return None
+
+            return valores_parcelas
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao calcular valores: {str(e)}")
+            return None
+
+    def calcular_parcelas_entrada(self, valor_total, num_parcelas):
+        """Calcula valores das parcelas considerando a modalidade de entrada"""
+        modalidade = self.modalidade_entrada.get()
+        valores_parcelas = []
+        
+        # Se tem entrada, o número de parcelas informado é adicional à entrada
+        num_parcelas_real = num_parcelas + 1 if self.tem_entrada.get() else num_parcelas
+        
+        if modalidade == "Percentual do valor total na primeira parcela":
+            try:
+                percentual = float(self.valor_entrada.get().replace(',', '.'))
+                if not (0 < percentual < 100):
+                    raise ValueError("Percentual deve estar entre 0 e 100")
+                
+                valor_entrada = (percentual / 100) * valor_total
+                valor_restante = valor_total - valor_entrada
+                
+                valores_parcelas = [valor_entrada]  # Primeira parcela (entrada)
+                # Distribuir o valor restante no número de parcelas informado
+                demais_parcelas = self.calcular_parcelas_ajustadas(valor_restante, num_parcelas)
+                valores_parcelas.extend(demais_parcelas)
+                
+            except ValueError as e:
+                raise ValueError(f"Erro no percentual de entrada: {str(e)}")
+        
+        elif modalidade == "Primeira parcela igual às demais (arredonda no final)":
+            # Dividir o valor total pelo número total de parcelas (incluindo entrada)
+            valores_parcelas = self.calcular_parcelas_ajustadas(valor_total, num_parcelas_real)
+            
+        elif modalidade == "Valor específico na primeira parcela":
+            try:
+                valor_entrada = float(self.valor_entrada.get().replace(',', '.'))
+                if valor_entrada >= valor_total:
+                    raise ValueError("Valor da entrada não pode ser maior ou igual ao valor total")
+                
+                valor_restante = valor_total - valor_entrada
+                valores_parcelas = [valor_entrada]  # Primeira parcela (entrada)
+                # Distribuir o valor restante no número de parcelas informado
+                demais_parcelas = self.calcular_parcelas_ajustadas(valor_restante, num_parcelas)
+                valores_parcelas.extend(demais_parcelas)
+                
+            except ValueError as e:
+                raise ValueError(f"Erro no valor da entrada: {str(e)}")
+        
+        return valores_parcelas
+
+    def calcular_parcelas_ajustadas(self, valor_total, num_parcelas):
+        """Calcula valores das parcelas garantindo que a soma seja igual ao valor total"""
+        valor_parcela_base = valor_total / num_parcelas
+        valor_parcela_round = round(valor_parcela_base, 2)
+        
+        # Calcular diferença total devido aos arredondamentos
+        diferenca = valor_total - (valor_parcela_round * num_parcelas)
+        
+        # Distribuir a diferença na última parcela
+        parcelas = [valor_parcela_round] * (num_parcelas - 1)
+        ultima_parcela = valor_parcela_round + round(diferenca, 2)
+        parcelas.append(ultima_parcela)
+        
+        return parcelas
 
     def calcular_data_rel(self, data_base, dt_vencto, eh_primeira_parcela):
         """
@@ -3525,320 +4211,33 @@ class GestorParcelas:
             print(f"Erro ao calcular data do relatório: {str(e)}")
             return dt_vencto
 
-    def abrir_janela_parcelas(self):
-        print("Abrindo janela de parcelas")  # Debug
-        # Criar janela como Toplevel do parent
-        self.janela_parcelas = tk.Toplevel(self.parent.root)
-        self.janela_parcelas.title("Configuração de Parcelas")
-        self.janela_parcelas.geometry("600x700")
-        
-        # Garantir que a janela seja modal
-        self.janela_parcelas.transient(self.parent.root)
-        self.janela_parcelas.grab_set()
-        
-        frame = ttk.Frame(self.janela_parcelas, padding="10")
-        frame.pack(fill='both', expand=True)
-
-        # Frame para entrada
-        frame_entrada = ttk.LabelFrame(frame, text="Entrada")
-        frame_entrada.grid(row=0, column=0, columnspan=2, sticky='ew', padx=5, pady=5)
-        
-        print("Criando Checkbutton")  # Debug
-        check = ttk.Checkbutton(
-            frame_entrada, 
-            text="Possui entrada?",
-            variable=self.tem_entrada,
-            command=self.atualizar_campos_entrada
-        )
-        check.grid(row=0, column=0, padx=5, pady=5)
-
-        # Frame para modalidades de entrada
-        print("Criando frame modalidade")  # Debug
-        self.frame_modalidade = ttk.Frame(frame_entrada)
-        self.frame_modalidade.grid(row=1, column=0, columnspan=2, sticky='ew', padx=5, pady=5)
-        
-        ttk.Label(self.frame_modalidade, text="Modalidade de Entrada:").grid(row=0, column=0, padx=5, pady=2)
-        self.modalidade_entrada = ttk.Combobox(self.frame_modalidade, state='readonly', width=40)
-        self.modalidade_entrada['values'] = [
-            "Percentual do valor total na primeira parcela",
-            "Primeira parcela igual às demais (arredonda no final)",
-            "Valor específico na primeira parcela"
-        ]
-        self.modalidade_entrada.grid(row=0, column=1, padx=5, pady=2)
-
-        # Garantir que o frame modalidade começa oculto
-        print("Ocultando frame modalidade inicialmente")  # Debug
-        self.frame_modalidade.grid_remove()
-##        self.modalidade_entrada.bind('<<ComboboxSelected>>', self.atualizar_campos_modalidade)
-        
-        # Frame para valor da entrada (dinâmico baseado na modalidade)
-        self.frame_valor_entrada = ttk.Frame(frame_entrada)
-        self.frame_valor_entrada.grid(row=2, column=0, columnspan=2, sticky='ew', padx=5, pady=5)
-        
-        # Ocultar frames inicialmente
-        self.frame_modalidade.grid_remove()
-        self.frame_valor_entrada.grid_remove()
-        
-        # Tipo de Despesa
-        ttk.Label(frame, text="Tipo de Despesa:").grid(row=1, column=0, padx=5, pady=5)
-        self.tipo_despesa = ttk.Combobox(frame, values=['2', '3'], state='readonly', width=5)
-        self.tipo_despesa.grid(row=1, column=1, sticky='w', padx=5, pady=5)
-        self.tipo_despesa.set('3')  # Tipo 3 como padrão
-
-        # Tipo de Parcelamento
-        ttk.Label(frame, text="Tipo de Parcelamento:").grid(row=2, column=0, padx=5, pady=5)
-        self.tipo_parcelamento = ttk.Combobox(frame, values=[
-            "Prazo Fixo em Dias",
-            "Datas Específicas",
-            "Cartão de Crédito"
-        ], state="readonly")
-        self.tipo_parcelamento.grid(row=2, column=1, padx=5, pady=5)
-        self.tipo_parcelamento.set("Prazo Fixo em Dias")
-        self.tipo_parcelamento.bind('<<ComboboxSelected>>', self.atualizar_campos_parcelamento)
-
-        # Frame para campos dinâmicos
-        self.frame_dinamico = ttk.Frame(frame)
-        self.frame_dinamico.grid(row=3, column=0, columnspan=2, pady=10)
-
-        # Campos comuns
-        ttk.Label(frame, text="Data da Despesa:").grid(row=4, column=0, padx=5, pady=5)
-        self.data_despesa = DateEntry(
-            frame,
-            format='dd/mm/yyyy',
-            locale='pt_BR',
-            background='darkblue',
-            foreground='white',
-            borderwidth=2
-        )
-        self.data_despesa.grid(row=4, column=1, padx=5, pady=5)
-        self.data_despesa.configure(state='normal')
-
-        ttk.Label(frame, text="Valor Original:").grid(row=5, column=0, padx=5, pady=5)
-        self.valor_original = ttk.Entry(frame)
-        self.valor_original.grid(row=5, column=1, padx=5, pady=5)
-
-        # Alterar o label do número de parcelas para ser mais claro
-        if self.tem_entrada.get():
-            ttk.Label(frame, text="Número de Parcelas (além da entrada):").grid(row=6, column=0, padx=5, pady=5)
-        else:
-            ttk.Label(frame, text="Número de Parcelas:").grid(row=6, column=0, padx=5, pady=5)
-        self.num_parcelas = ttk.Entry(frame)
-        self.num_parcelas.grid(row=6, column=1, padx=5, pady=5)
-
-        # Adicionar um label informativo
-        self.lbl_info_parcelas = ttk.Label(frame, text="")
-        self.lbl_info_parcelas.grid(row=7, column=0, columnspan=2, padx=5, pady=2)
-
-        # Frame específico para informação sobre parcelas
-        frame_info_parcelas = ttk.Frame(frame)
-        frame_info_parcelas.grid(row=7, column=0, columnspan=2, padx=5, pady=5, sticky='ew')
-        
-        self.lbl_info_parcelas = ttk.Label(
-            frame_info_parcelas, 
-            text="",
-            wraplength=500,  # Permitir quebra de linha se necessário
-            justify='center'
-        )
-        self.lbl_info_parcelas.pack(fill='x', padx=5)
-
-        # Mover Referência Base para depois da informação
-        ttk.Label(frame, text="Referência Base:").grid(row=8, column=0, padx=5, pady=5)
-        self.referencia_base = ttk.Entry(frame)
-        self.referencia_base.grid(row=8, column=1, padx=5, pady=5, sticky='ew')
-
-        # Botões
-        frame_botoes = ttk.Frame(frame)
-        frame_botoes.grid(row=10, column=0, columnspan=2, pady=20)
-
-        ttk.Button(frame_botoes, 
-                  text="Gerar Parcelas", 
-                  command=self.gerar_parcelas).pack(side='left', padx=5)
-        ttk.Button(frame_botoes, 
-                  text="Cancelar", 
-                  command=self.janela_parcelas.destroy).pack(side='left', padx=5)
-
-        # Inicializar campos do tipo padrão
-        self.atualizar_campos_parcelamento(None)
-
-        # Fazer a janela modal
-        self.janela_parcelas.transient(self.parent.root)
-        self.janela_parcelas.grab_set()
-
-        # Centralizar a janela
-        self.janela_parcelas.update_idletasks()
-        width = self.janela_parcelas.winfo_width()
-        height = self.janela_parcelas.winfo_height()
-        x = (self.janela_parcelas.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.janela_parcelas.winfo_screenheight() // 2) - (height // 2)
-        self.janela_parcelas.geometry(f'{width}x{height}+{x}+{y}')
-
-
-    def _debug_atualizar_campos_entrada(self):
-        """Função de debug para atualizar campos de entrada"""
-        print("\nDebug de atualização de campos:")
-        print(f"Valor atual do tem_entrada: {self.tem_entrada.get()}")
-        print(f"Frame modalidade existe? {self.frame_modalidade is not None}")
-        
-        if self.tem_entrada.get():
-            print("Tentando mostrar frame modalidade")
-            self.frame_modalidade.grid()
-            self.janela_parcelas.update_idletasks()
-            print("Frame modalidade deveria estar visível agora")
-        else:
-            print("Tentando ocultar frame modalidade")
-            self.frame_modalidade.grid_remove()
-            print("Frame modalidade deveria estar oculto agora")
-        
-        # Chamar a função original
-        self.atualizar_campos_entrada()
-
-    def atualizar_campos_entrada(self):
-        """Mostra/oculta campos relacionados à entrada e atualiza labels"""
-        if self.tem_entrada.get():
-            # Mostrar e configurar frame modalidade
-            self.frame_modalidade.grid()
-            self.modalidade_entrada.set('')  # Limpar seleção atual
-            self.frame_valor_entrada.grid_remove()
+    def configurar_calendario(self, dateentry):
+        """Configura o comportamento do calendário"""
+        def on_calendar_click(event):
+            # Permite cliques no calendário
+            return True
             
-            # Forçar atualização da interface
-            self.frame_modalidade.update()
-            self.janela_parcelas.update_idletasks()
-             
-            # Atualizar label do número de parcelas
-            for widget in self.janela_parcelas.winfo_children():
-                if isinstance(widget, ttk.Label) and widget.cget("text").startswith("Número de Parcelas"):
-                    widget.config(text="Número de Parcelas (após a entrada):")
-            
-            self.lbl_info_parcelas.config(
-                text="Total de lançamentos: 1 entrada + número de parcelas informado",
-                foreground="blue"
-            )
-        else:
-            # Ocultar frames
-            self.frame_modalidade.grid_remove()
-            self.frame_valor_entrada.grid_remove()
-            
-            # Restaurar label original
-            for widget in self.janela_parcelas.winfo_children():
-                if isinstance(widget, ttk.Label) and widget.cget("text").startswith("Número de Parcelas"):
-                    widget.config(text="Número de Parcelas:")
-            self.lbl_info_parcelas.config(text="")
-            
+        def on_calendar_select(event):
+            dateentry._top_cal.withdraw()  # Fecha o calendário
+            self.janela_parcelas.after(100, lambda: self.janela_parcelas.focus_set())  # Retorna foco
+        
+        def on_calendar_focus(event):
+            # Mantém o foco quando o calendário está aberto
+            if dateentry._top_cal:
+                dateentry._top_cal.focus_set()
+            return True
 
-    def atualizar_campos_modalidade(self, event=None):
-        """Atualiza campos baseado na modalidade selecionada"""
-        modalidade = self.modalidade_entrada.get()
-        self.frame_valor_entrada.grid()
+        # Configurar bindings
+        dateentry.bind('<<DateEntrySelected>>', on_calendar_select)
+        dateentry.bind('<FocusIn>', on_calendar_focus)
         
-        if modalidade == "Percentual do valor total na primeira parcela":
-            self.lbl_entrada.config(text="Percentual (%): ")
-            self.valor_entrada.delete(0, tk.END)
-        
-        elif modalidade == "Primeira parcela igual às demais (arredonda no final)":
-            self.frame_valor_entrada.grid_remove()  # Não precisa de valor
-        
-        elif modalidade == "Valor específico na primeira parcela":
-            self.lbl_entrada.config(text="Valor (R$): ")
-            self.valor_entrada.delete(0, tk.END)
+        if hasattr(dateentry, '_top_cal'):
+            cal = dateentry._top_cal
+            cal.bind('<Button-1>', on_calendar_click)
+            for w in cal.winfo_children():
+                w.bind('<Button-1>', on_calendar_click)
 
-    def calcular_parcelas_entrada(self, valor_total, num_parcelas):
-        """Calcula valores das parcelas considerando a modalidade de entrada"""
-        modalidade = self.modalidade_entrada.get()
-        valores_parcelas = []
         
-        # Se tem entrada, o número de parcelas informado é adicional à entrada
-        num_parcelas_real = num_parcelas + 1 if self.tem_entrada.get() else num_parcelas
-        
-        if modalidade == "Percentual do valor total na primeira parcela":
-            try:
-                percentual = float(self.valor_entrada.get().replace(',', '.'))
-                if not (0 < percentual < 100):
-                    raise ValueError("Percentual deve estar entre 0 e 100")
-                
-                valor_entrada = (percentual / 100) * valor_total
-                valor_restante = valor_total - valor_entrada
-                
-                valores_parcelas = [valor_entrada]  # Primeira parcela (entrada)
-                # Distribuir o valor restante no número de parcelas informado
-                demais_parcelas = self.calcular_parcelas_ajustadas(valor_restante, num_parcelas)
-                valores_parcelas.extend(demais_parcelas)
-                
-            except ValueError as e:
-                raise ValueError(f"Erro no percentual de entrada: {str(e)}")
-        
-        elif modalidade == "Primeira parcela igual às demais (arredonda no final)":
-            # Dividir o valor total pelo número total de parcelas (incluindo entrada)
-            valores_parcelas = self.calcular_parcelas_ajustadas(valor_total, num_parcelas_real)
-            
-        elif modalidade == "Valor específico na primeira parcela":
-            try:
-                valor_entrada = float(self.valor_entrada.get().replace(',', '.'))
-                if valor_entrada >= valor_total:
-                    raise ValueError("Valor da entrada não pode ser maior ou igual ao valor total")
-                
-                valor_restante = valor_total - valor_entrada
-                valores_parcelas = [valor_entrada]  # Primeira parcela (entrada)
-                # Distribuir o valor restante no número de parcelas informado
-                demais_parcelas = self.calcular_parcelas_ajustadas(valor_restante, num_parcelas)
-                valores_parcelas.extend(demais_parcelas)
-                
-            except ValueError as e:
-                raise ValueError(f"Erro no valor da entrada: {str(e)}")
-        
-        return valores_parcelas
-            
-
-    def calcular_parcelas_ajustadas(self, valor_total, num_parcelas):
-        """Calcula valores das parcelas garantindo que a soma seja igual ao valor total"""
-        valor_parcela_base = valor_total / num_parcelas
-        valor_parcela_round = round(valor_parcela_base, 2)
-        
-        # Calcular diferença total devido aos arredondamentos
-        diferenca = valor_total - (valor_parcela_round * num_parcelas)
-        
-        # Distribuir a diferença na última parcela
-        parcelas = [valor_parcela_round] * (num_parcelas - 1)
-        ultima_parcela = valor_parcela_round + round(diferenca, 2)
-        parcelas.append(ultima_parcela)
-        
-        return parcelas
-            
-
-    def atualizar_campos_parcelamento(self, event):
-        # Limpar frame dinâmico
-        for widget in self.frame_dinamico.winfo_children():
-            widget.destroy()
-
-        tipo = self.tipo_parcelamento.get()
-        
-        if tipo == "Prazo Fixo em Dias":
-            ttk.Label(self.frame_dinamico, text="Prazo entre Parcelas (dias):").grid(row=0, column=0, padx=5, pady=5)
-            self.prazo_dias = ttk.Entry(self.frame_dinamico)
-            self.prazo_dias.grid(row=0, column=1, padx=5, pady=5)
-            self.prazo_dias.insert(0, "30")  # Valor padrão
-
-        elif tipo == "Datas Específicas":
-            num_parcelas_txt = "parcelas após a entrada" if self.tem_entrada.get() else "parcelas"
-            
-            ttk.Label(self.frame_dinamico, 
-                     text=f"Informe as datas de vencimento das {num_parcelas_txt}:").grid(
-                         row=0, column=0, columnspan=2, padx=5, pady=5)
-            
-            self.texto_datas = tk.Text(self.frame_dinamico, height=4, width=30)
-            self.texto_datas.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
-            
-            ttk.Label(self.frame_dinamico, 
-                     text="Digite uma data por linha no formato dd/mm/aaaa\n"
-                          "(não inclua a data da entrada)").grid(
-                         row=2, column=0, columnspan=2, padx=5, pady=5)
-
-        elif tipo == "Cartão de Crédito":
-            ttk.Label(self.frame_dinamico, text="Dia do Vencimento:").grid(row=0, column=0, padx=5, pady=5)
-            self.dia_vencimento = ttk.Entry(self.frame_dinamico, width=5)
-            self.dia_vencimento.grid(row=0, column=1, padx=5, pady=5)
-            self.dia_vencimento.insert(0, "10")  # Valor padrão
-
-
     def proximo_dia_util(self, data):
         """
         Ajusta a data para o próximo dia útil se cair em fim de semana ou feriado
@@ -3871,194 +4270,6 @@ class GestorParcelas:
 
         return data
 
-
-
-    def gerar_parcelas(self):
-        try:
-            self.tipo_despesa_valor = self.tipo_despesa.get()
-            valor_original = float(self.valor_original.get().replace(',', '.'))
-            num_parcelas = int(self.num_parcelas.get())
-            referencia_base = self.referencia_base.get().strip()
-            tipo = self.tipo_parcelamento.get()
-            
-            if not referencia_base or num_parcelas <= 0:
-                messagebox.showerror("Erro", "Preencha todos os campos obrigatórios!")
-                return
-
-            # Validações específicas por tipo de parcelamento
-            if tipo == "Prazo Fixo em Dias":
-                if not hasattr(self, 'prazo_dias') or not self.prazo_dias.get():
-                    messagebox.showerror("Erro", "Informe o prazo entre as parcelas!")
-                    return
-            elif tipo == "Datas Específicas":
-                if not hasattr(self, 'texto_datas'):
-                    messagebox.showerror("Erro", "Configure as datas específicas!")
-                    return
-            elif tipo == "Cartão de Crédito":
-                if not hasattr(self, 'dia_vencimento') or not self.dia_vencimento.get():
-                    messagebox.showerror("Erro", "Informe o dia do vencimento!")
-                    return
-                try:
-                    dia_vencimento = int(self.dia_vencimento.get())
-                    if not (1 <= dia_vencimento <= 31):
-                        messagebox.showerror("Erro", "Dia de vencimento deve estar entre 1 e 31!")
-                        return
-                except ValueError:
-                    messagebox.showerror("Erro", "Dia de vencimento inválido!")
-                    return
-
-            # Data base é a data da despesa
-            data_base = datetime.strptime(self.data_despesa.get(), '%d/%m/%Y')
-            
-            # Limpar lista de parcelas anterior
-            self.parcelas = []
-
-            # Calcular valores das parcelas considerando entrada se houver
-            valores_parcelas = []
-            if self.tem_entrada.get():
-                if not self.modalidade_entrada.get():
-                    messagebox.showerror("Erro", "Selecione a modalidade de entrada!")
-                    return
-                valores_parcelas = self.calcular_parcelas_entrada(valor_original, num_parcelas)
-            else:
-                valores_parcelas = self.calcular_parcelas_ajustadas(valor_original, num_parcelas)
-
-            # Verificar se a soma está correta
-            soma_parcelas = sum(valores_parcelas)
-            if abs(soma_parcelas - valor_original) > 0.01:  # Tolerância de 1 centavo
-                messagebox.showerror(
-                    "Erro", 
-                    f"Erro no cálculo das parcelas: soma ({soma_parcelas:.2f}) " 
-                    f"diferente do valor original ({valor_original:.2f})!"
-                )
-                return
-
-            # Gerar parcelas conforme o tipo selecionado
-            tipo = self.tipo_parcelamento.get()
-            
-            if tipo == "Prazo Fixo em Dias":
-                prazo_dias = int(self.prazo_dias.get())
-                for i, valor_parcela in enumerate(valores_parcelas):
-                    eh_primeira_parcela = (i == 0)
-                    if eh_primeira_parcela and self.tem_entrada.get():
-                        dt_vencto = data_base
-                        data_rel = self.calcular_data_rel(data_base, dt_vencto, True)
-                    else:
-                        dt_vencto = data_base + relativedelta(days=prazo_dias * (i + (0 if self.tem_entrada.get() else 1)))
-                        dt_vencto = self.proximo_dia_util(dt_vencto)
-                        data_rel = self.calcular_data_rel(data_base, dt_vencto, eh_primeira_parcela)
-                    
-                    # Criar parcela sem concatenar referência extra
-                    self.parcelas.append({
-                        'data_rel': data_rel.strftime('%d/%m/%Y'),
-                        'dt_vencto': dt_vencto.strftime('%d/%m/%Y'),
-                        'valor': valor_parcela,
-                        'referencia': self.gerar_referencia_parcela(referencia_base, i, num_parcelas, eh_primeira_parcela)
-                    })
-
-            elif tipo == "Datas Específicas":
-                datas_texto = self.texto_datas.get("1.0", tk.END).strip().split('\n')
-                datas_texto = [d.strip() for d in datas_texto if d.strip()]  # Remove linhas vazias
-                
-                # Se tem entrada, precisa ser num_parcelas informado
-                # Se não tem entrada, precisa ser igual ao num_parcelas informado
-                num_datas_esperado = num_parcelas
-                
-                if len(datas_texto) != num_datas_esperado:
-                    messagebox.showerror(
-                        "Erro", 
-                        f"Para {num_parcelas} {'parcelas após a entrada' if self.tem_entrada.get() else 'parcelas'}, "
-                        f"é necessário informar {num_datas_esperado} "
-                        f"data{'s' if num_datas_esperado > 1 else ''} de vencimento."
-                    )
-                    return
-
-                for i, valor_parcela in enumerate(valores_parcelas):
-                    eh_primeira_parcela = (i == 0)
-                    
-                    if eh_primeira_parcela and self.tem_entrada.get():
-                        # Para entrada, usar data base
-                        dt_vencto = data_base
-                        data_rel = self.calcular_data_rel(data_base, dt_vencto, True)
-                    else:
-                        # Para demais parcelas, usar datas informadas
-                        try:
-                            # Se tem entrada, começa a usar as datas a partir do índice 0
-                            # Se não tem entrada, usa os índices normalmente
-                            idx_data = i - 1 if self.tem_entrada.get() else i
-                            if 0 <= idx_data < len(datas_texto):  # Verifica se o índice é válido
-                                dt_vencto = datetime.strptime(datas_texto[idx_data], '%d/%m/%Y')
-                                dt_vencto = self.proximo_dia_util(dt_vencto)
-                                data_rel = self.calcular_data_rel(data_base, dt_vencto, eh_primeira_parcela)
-                            else:
-                                raise ValueError(f"Índice de data inválido: {idx_data}")
-                        except ValueError as e:
-                            messagebox.showerror("Erro", f"Erro ao processar data: {str(e)}")
-                            return
-                        except IndexError:
-                            messagebox.showerror("Erro", "Número insuficiente de datas fornecidas")
-                            return
-
-                    # Criar parcela sem concatenar referência extra
-                    self.parcelas.append({
-                        'data_rel': data_rel.strftime('%d/%m/%Y'),
-                        'dt_vencto': dt_vencto.strftime('%d/%m/%Y'),
-                        'valor': valor_parcela,
-                        'referencia': self.gerar_referencia_parcela(referencia_base, i, num_parcelas, eh_primeira_parcela)
-                    })
-
-            elif tipo == "Cartão de Crédito":
-                dia_vencimento = int(self.dia_vencimento.get())
-                for i, valor_parcela in enumerate(valores_parcelas):
-                    eh_primeira_parcela = (i == 0)
-                    
-                    # Calcular data de vencimento
-                    if eh_primeira_parcela:
-                        # Para primeira parcela, vence no próximo mês
-                        data_atual = data_base + relativedelta(months=1)
-                    else:
-                        # Para demais parcelas, adiciona mais meses
-                        data_atual = data_base + relativedelta(months=i + 1)
-                    
-                    try:
-                        dt_vencto = data_atual.replace(day=dia_vencimento)
-                    except ValueError:
-                        dt_vencto = data_atual + relativedelta(day=31)
-                    
-                    dt_vencto = self.proximo_dia_util(dt_vencto)
-                    
-                    # Calcular data do relatório
-                    if eh_primeira_parcela:
-                        # Para primeira parcela, usar a data atual como base
-                        hoje = datetime.now()
-                        if hoje.day <= 5:
-                            data_rel = hoje.replace(day=5)
-                        elif hoje.day <= 20:
-                            data_rel = hoje.replace(day=20)
-                        else:
-                            proximo_mes = hoje + relativedelta(months=1)
-                            data_rel = proximo_mes.replace(day=5)
-                    else:
-                        # Para demais parcelas, calcular normalmente
-                        data_rel = self.calcular_data_rel(data_base, dt_vencto, False)
-                    
-                    # Criar parcela sem concatenar referência extra
-                    self.parcelas.append({
-                        'data_rel': data_rel.strftime('%d/%m/%Y'),
-                        'dt_vencto': dt_vencto.strftime('%d/%m/%Y'),
-                        'valor': valor_parcela,
-                        'referencia': self.gerar_referencia_parcela(referencia_base, i, num_parcelas, eh_primeira_parcela)
-                    })
-
-            if self.parcelas:
-                messagebox.showinfo("Sucesso", f"{len(self.parcelas)} parcela(s) gerada(s) com sucesso!")
-                self.janela_parcelas.destroy()
-
-        except ValueError as e:
-            messagebox.showerror("Erro", f"Erro ao gerar parcelas: {str(e)}")
-        except Exception as e:
-            messagebox.showerror("Erro", f"Erro inesperado: {str(e)}")
-
     def gerar_referencia_parcela(self, referencia_base, indice, num_parcelas, eh_primeira_parcela):
         """Gera a referência apropriada para a parcela"""
         if eh_primeira_parcela and self.tem_entrada.get():
@@ -4071,56 +4282,47 @@ class GestorParcelas:
                 # Para parcelamento sem entrada
                 return f"{referencia_base} - PARC. {indice + 1}/{num_parcelas}"
            
-
-    
-    def adicionar_parcela(self, data_rel, dt_vencto, valor_parcela, referencia_base, num_parcela, total_parcelas):
-        """
-        Adiciona uma parcela à lista de parcelas
-        Args:
-            data_rel: data do relatório
-            dt_vencto: data de vencimento
-            valor_parcela: valor da parcela
-            referencia_base: texto base da referência
-            num_parcela: número da parcela atual (1-based)
-            total_parcelas: número total de parcelas
-        """
-        # Se tem entrada, o total de parcelas não inclui a entrada
-        total_parcelas_real = total_parcelas - 1 if self.tem_entrada.get() else total_parcelas
+    # Métodos de limpeza e finalização
+    def limpar_campos(self):
+        """Limpa todos os campos após sucesso"""
+        # Limpar referências de widgets
+        self.frame_modalidade = None
+        self.frame_valor_entrada = None
+        self.lbl_entrada = None
+        self.valor_entrada = None
+        self.modalidade_entrada = None
         
-        # O número real da parcela depende se tem entrada ou não
-        eh_primeira = num_parcela == 1
+        # Resetar checkbox
+        if self._var_tem_entrada:
+            self._var_tem_entrada.set(False)
         
-        referencia = self.gerar_referencia_parcela(
-            referencia_base, 
-            num_parcela - 1,  # Convertendo para 0-based para cálculos internos
-            total_parcelas_real, 
-            eh_primeira
-        )
-        
-        self.parcelas.append({
-            'data_rel': data_rel.strftime('%d/%m/%Y'),
-            'referencia': referencia,
-            'valor': valor_parcela,
-            'dt_vencto': dt_vencto.strftime('%d/%m/%Y')
-        })
-
-    def adicionar_parcela_com_data_especifica(self, dt_vencto, valor_parcela, referencia_base, num_parcela, total_parcelas):
-        """Adiciona uma parcela mantendo a data de vencimento específica"""
-        self.parcelas.append({
-            'data_rel': self.calcular_data_rel(dt_vencto).strftime('%d/%m/%Y'),
-            'referencia': f"{referencia_base} - PARC. {num_parcela}/{total_parcelas}",
-            'valor': valor_parcela,
-            'dt_vencto': dt_vencto.strftime('%d/%m/%Y')
-        })
-
-    def cancelar_parcelamento(self):
-        """Cancela o parcelamento limpando os dados e fechando a janela"""
-        self.parcelas = []  # Limpa as parcelas
+        # Fechar janela
         if self.janela_parcelas:
             self.janela_parcelas.destroy()
+            self.janela_parcelas = None
 
+    def cancelar_parcelamento(self):
+        """Cancela o parcelamento e limpa todos os campos"""
+        self.parcelas = []
+        
+        # Limpar referências de widgets
+        self.frame_modalidade = None
+        self.frame_valor_entrada = None
+        self.lbl_entrada = None
+        self.valor_entrada = None
+        self.modalidade_entrada = None
+        
+        # Resetar variável de entrada
+        if self._var_tem_entrada:
+            self._var_tem_entrada.set(False)
+        
+        if self.janela_parcelas:
+            self.janela_parcelas.destroy()
+            self.janela_parcelas = None
 
-    
+            
+        
+
 
     # Fechando os métodos/classes anteriores
     def run(self):

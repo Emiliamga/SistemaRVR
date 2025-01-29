@@ -3,8 +3,22 @@ from tkinter import ttk, PhotoImage, messagebox
 import os
 import sys
 import importlib
-import types
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from pathlib import Path
+
+# Ajusta o path para acessar a pasta config
+current_dir = Path(__file__).resolve().parent
+root_dir = current_dir.parent
+sys.path.append(str(root_dir))
+
+try:
+    from gestao_taxas import GestaoTaxasAdministracao
+except ImportError as e:
+    print(f"Erro ao importar GestaoTaxasAdministracao: {e}")
+    print(f"Diretório atual: {current_dir}")
+    print(f"Diretório raiz: {root_dir}")
+    print(f"Python Path: {sys.path}")
+    sys.exit(1)
+
 
 def resource_path(relative_path):
     try:
@@ -19,9 +33,13 @@ class SistemaPrincipal:
         self.root.title("Sistema de Gestão Financeira")
         self.root.geometry("800x600")
         self.root.lift()
-
+        
+        # Inicializar gerenciador de taxas
+        self.gestao_taxas = GestaoTaxasAdministracao(self.root)
+        
         self.setup_style()
         self.create_main_content()
+        
 
     def setup_style(self):
         """Configura o estilo visual do aplicativo"""
@@ -60,19 +78,27 @@ class SistemaPrincipal:
         )
         title_label.pack(pady=(0, 30))
 
-        # Grid para botões
+        # Grid para cards
         grid = ttk.Frame(main_frame)
         grid.pack(expand=True, pady=20)
 
-        self.create_card(grid, "Entrada de Dados", "Cadastro e gestão de dados", 
+        # Cards do sistema
+        self.create_card(grid, "Entrada de Dados", 
+                        "Cadastro e gestão de dados", 
                         self.abrir_entrada_dados, 0, 0)
-        self.create_card(grid, "Finalizar Quinzena", "Processar Taxa de Administração", 
-                        self.finalizar_quinzena, 0, 1)
-        self.create_card(grid, "Geração de Relatórios", "Visualização de relatórios", 
+        
+        self.create_card(grid, "Taxas de Administração",
+                        "Gestão completa de taxas administrativas",
+                        self.abrir_gestao_taxas, 0, 1)
+        
+        self.create_card(grid, "Geração de Relatórios",
+                        "Visualização de relatórios",
                         self.abrir_relatorios, 0, 2)
         
         # Botão Sair
-        sair_btn = ttk.Button(main_frame, text="Sair", command=self.sair_sistema)
+        sair_btn = ttk.Button(main_frame, 
+                             text="Sair",
+                             command=self.sair_sistema)
         sair_btn.pack(pady=20)
 
     def create_card(self, parent, title, description, command, row, col):
@@ -102,6 +128,62 @@ class SistemaPrincipal:
         )
         button.pack(pady=(0, 20))
 
+    def abrir_entrada_dados(self):
+        """Abre o sistema de entrada de dados"""
+        try:
+            print("Iniciando abertura do sistema de entrada de dados...")
+            
+            # Recarrega o módulo Sistema_Entrada_Dados
+            modulo = self.reload_module('Sistema_Entrada_Dados')
+            if not modulo:
+                return
+
+            self.root.withdraw()
+            
+            # Cria nova instância da classe
+            app = modulo.SistemaEntradaDados(parent=self.root)
+            app.root.lift()
+            app.root.focus_force()
+            app.root.mainloop()
+
+        except Exception as e:
+            messagebox.showerror("Erro",
+                f"Erro ao abrir sistema de entrada de dados: {str(e)}")
+            self.root.deiconify()
+
+    def abrir_gestao_taxas(self):
+        """Abre o menu de gestão de taxas"""
+        try:
+            self.gestao_taxas.abrir_menu_taxas()
+        except Exception as e:
+            messagebox.showerror("Erro",
+                f"Erro ao abrir gestão de taxas: {str(e)}")
+
+    def abrir_relatorios(self):
+        """Abre o sistema de relatórios"""
+        try:
+            modulo = self.reload_module('relatorio_despesas_aprimorado')
+            if not modulo:
+                return
+
+            self.root.withdraw()
+            relatorio_window = tk.Toplevel(self.root)
+            
+            app = modulo.RelatorioUI(relatorio_window)
+            app.menu_principal = self.root
+            
+            relatorio_window.protocol("WM_DELETE_WINDOW", 
+                lambda: self.finalizar_sistema(relatorio_window))
+            
+            relatorio_window.lift()
+            relatorio_window.focus_force()
+            relatorio_window.mainloop()
+            
+        except Exception as e:
+            messagebox.showerror("Erro",
+                f"Erro ao abrir sistema de relatórios: {str(e)}")
+            self.root.deiconify()
+
     def reload_module(self, module_name):
         """
         Recarrega um módulo e retorna a versão atualizada
@@ -122,104 +204,6 @@ class SistemaPrincipal:
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao carregar módulo {module_name}: {str(e)}")
             return None
-
-    def abrir_entrada_dados(self):
-        """Abre o sistema de entrada de dados"""
-        try:
-            print("Iniciando abertura do sistema de entrada de dados...")  # Debug
-            
-            # Limpar todos os módulos relacionados
-            modulos_para_limpar = ['Sistema_Entrada_Dados', 'finalizacao_quinzena']
-            for mod in modulos_para_limpar:
-                if mod in sys.modules:
-                    print(f"Removendo módulo {mod}")  # Debug
-                    del sys.modules[mod]
-
-            # Recarrega o módulo Sistema_Entrada_Dados
-            print("Carregando Sistema_Entrada_Dados...")  # Debug
-            modulo = importlib.import_module('Sistema_Entrada_Dados')
-            
-            if not modulo:
-                return
-
-            self.root.attributes('-topmost', False)
-            self.root.withdraw()
-            
-            print("Criando instância do SistemaEntradaDados...")  # Debug
-            # Cria nova instância da classe atualizada, passando o root como parent
-            app = modulo.SistemaEntradaDados(parent=self.root)
-            
-            # Configura a referência ao menu principal
-            app.menu_principal = self.root
-            
-            print("Configurando janela...")  # Debug
-            app.root.lift()
-            app.root.focus_force()
-            app.root.protocol("WM_DELETE_WINDOW", lambda: self.finalizar_sistema(app.root))
-            
-            print("Iniciando mainloop...")  # Debug
-            app.root.mainloop()
-
-        except Exception as e:
-            messagebox.showerror("Erro", f"Erro ao abrir sistema de entrada de dados: {str(e)}")
-            print(f"Erro detalhado: {str(e)}")  # Debug detalhado
-            self.root.deiconify()
-
-    def finalizar_quinzena(self):
-        """Abre o sistema de finalização de quinzena"""
-        try:
-            # Recarrega o módulo de finalização de quinzena
-            modulo = self.reload_module('finalizacao_quinzena')
-            if not modulo:
-                return
-
-            self.root.attributes('-topmost', False)
-            self.root.withdraw()
-            
-            # Cria nova instância da classe atualizada
-            app = modulo.FinalizacaoQuinzena(parent=self.root)
-            app.root.lift()
-            app.root.focus_force()
-            app.root.mainloop()
-
-        except Exception as e:
-            messagebox.showerror("Erro", f"Erro ao abrir finalização de quinzena: {str(e)}")
-            self.root.deiconify()
-
-            
-
-    def abrir_relatorios(self):
-        try:
-            modulo = self.reload_module('relatorio_despesas_aprimorado')
-            if not modulo:
-                return
-
-            self.root.attributes('-topmost', False)
-            self.root.withdraw()
-            
-            # Criar nova janela Toplevel em vez de None
-            relatorio_window = tk.Toplevel(self.root)
-            relatorio_window.withdraw()  # Esconder inicialmente
-            
-            # Inicializar o RelatorioUI com a nova janela
-            app = modulo.RelatorioUI(relatorio_window)
-            app.menu_principal = self.root
-            
-            # Configurar protocolo de fechamento
-            relatorio_window.protocol("WM_DELETE_WINDOW", 
-                lambda: self.finalizar_sistema(relatorio_window))
-            
-            # Mostrar a janela e configurar foco
-            relatorio_window.deiconify()
-            relatorio_window.lift()
-            relatorio_window.focus_force()
-            
-            # Não chamar mainloop aqui
-            
-        except Exception as e:
-            messagebox.showerror("Erro", 
-                f"Erro ao abrir sistema de relatórios: {str(e)}")
-            self.root.deiconify()
 
     def sair_sistema(self):
         """Fecha o sistema após confirmação"""
