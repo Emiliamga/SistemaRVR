@@ -439,8 +439,10 @@ class SistemaEntradaDados:
         print("Inicializando SistemaEntradaDados...")  # Debug
         if parent:
             self.root = tk.Toplevel(parent)
+            self.menu_principal = parent  # Guardar referência à janela principal
         else:
             self.root = tk.Tk()
+            self.menu_principal = None
         
         self.root.title("Sistema de Entrada de Dados")
         self.dados_para_incluir = []
@@ -493,9 +495,14 @@ class SistemaEntradaDados:
             "Confirmação", 
             "Existem dados não salvos. Deseja salvá-los antes de sair?"):
             self.enviar_dados()
-        self.root.destroy()
-        if hasattr(self, 'menu_principal'):
+        
+        self.root.destroy()  # Fecha a janela atual
+        
+        # Se tiver referência ao menu principal, mostra ele
+        if self.menu_principal:
             self.menu_principal.deiconify()
+            self.menu_principal.lift()
+            self.menu_principal.focus_force()
 
     def sair_sistema(self):
         """Fecha o sistema verificando dados não salvos"""
@@ -851,7 +858,7 @@ class SistemaEntradaDados:
                      "ADMINISTRADORES_CONTRATO", "", "", "", "", "", "",
                      "ADITIVOS", "", "", "",
                      "ADMINISTRADORES_ADITIVO", "", "", "", "", "", "",
-                     "PARCELAS", "", "", "", ""]
+                     "PARCELAS", "", "", "", "", "", "", ""]
             
             for col, valor in enumerate(blocos, 1):
                 contratos_sheet.cell(row=1, column=col, value=valor)
@@ -867,7 +874,7 @@ class SistemaEntradaDados:
                 # ADMINISTRADORES_ADITIVO
                 "Nº Contrato", "Nº Aditivo", "CNPJ/CPF", "Nome/Razão Social", "Tipo", "Valor/Percentual", "Valor Total",
                 # PARCELAS
-                "Referência", "Número", "CNPJ/CPF", "Data Vencimento", "Valor", "Status"
+                "Referência", "Número", "CNPJ/CPF", "Nome", "Data Vencimento", "Valor", "Status", "Data Pagamento"
             ]
             
             for col, header in enumerate(headers, 1):
@@ -1465,6 +1472,8 @@ class SistemaEntradaDados:
                     
                     self.campos_despesa['tp_desp'].delete(0, tk.END)
                     self.campos_despesa['tp_desp'].insert(0, self.gestor_parcelas.tipo_despesa_valor)
+                    self.campos_despesa['nf'].delete(0, tk.END)
+                    self.campos_despesa['nf'].insert(0, parcela['nf'])
                     
                     if isinstance(self.campos_despesa['referencia'], ttk.Combobox):
                         self.campos_despesa['referencia'].set(parcela['referencia'])
@@ -2154,7 +2163,6 @@ class SistemaEntradaDados:
         if not (1 <= tp_desp_num <= 6):
             self.campos_despesa['tp_desp'].delete(0, tk.END)
             return
-
         # Configura o campo dias
         if tp_desp == '1':
             self.campos_despesa['dias'].config(state='normal')
@@ -2162,6 +2170,15 @@ class SistemaEntradaDados:
             self.campos_despesa['dias'].config(state='disabled')
             self.campos_despesa['dias'].delete(0, tk.END)
             self.campos_despesa['dias'].insert(0, '1')
+
+
+        # Configura o campo nf
+        if tp_desp != '1':
+            self.campos_despesa['nf'].config(state='normal')
+        else:
+            self.campos_despesa['nf'].config(state='disabled')
+            self.campos_despesa['nf'].delete(0, tk.END)
+            
 
 
         # Atualiza o campo referência
@@ -3015,14 +3032,13 @@ class GestaoContratos:
 
 
     def adicionar_administrador(self, tree):
+        """Abre janela para adicionar novo administrador"""
         janela = tk.Toplevel(self.parent)
         janela.title("Adicionar Administrador")
         janela.geometry("600x650")
 
         frame = ttk.Frame(janela, padding="10")
         frame.pack(fill='both', expand=True)
-
-        
 
         # Frame de busca
         frame_busca = ttk.LabelFrame(frame, text="Buscar Fornecedor")
@@ -3034,8 +3050,7 @@ class GestaoContratos:
 
         # Lista de fornecedores
         frame_lista = ttk.LabelFrame(frame, text="Fornecedores")
-        frame_lista.pack(fill='x', padx=5, pady=5)  # Mudado de fill='both' para fill='x'
-
+        frame_lista.pack(fill='x', padx=5, pady=5)
 
         tree_fornecedores = ttk.Treeview(frame_lista, 
                                         columns=('CNPJ/CPF', 'Nome', 'Categoria'),
@@ -3065,11 +3080,6 @@ class GestaoContratos:
         tipo_combo = ttk.Combobox(frame_dados, values=['Percentual', 'Fixo'], state='readonly')
         tipo_combo.grid(row=2, column=1, padx=5, pady=2)
 
-        # Valor/Percentual
-        ttk.Label(frame_dados, text="Valor/Percentual:*").grid(row=3, column=0, padx=5, pady=2)
-        valor_entry = ttk.Entry(frame_dados)
-        valor_entry.grid(row=3, column=1, padx=5, pady=2)
-
         # Frame para valores fixos
         frame_fixo = ttk.Frame(frame_dados)
         frame_fixo.grid(row=4, column=0, columnspan=2, pady=5)
@@ -3079,131 +3089,146 @@ class GestaoContratos:
         valor_total_entry = ttk.Entry(frame_fixo)
         valor_total_entry.grid(row=0, column=1, padx=5, pady=2)
 
+        # Checkbox para entrada
+        tem_entrada = tk.BooleanVar()
+        check_entrada = ttk.Checkbutton(frame_fixo, text="Possui Entrada?", variable=tem_entrada,
+                                       command=lambda: atualizar_campos_entrada())
+        check_entrada.grid(row=1, column=0, columnspan=2, padx=5, pady=2)
+
+        # Frame para entrada
+        frame_entrada = ttk.Frame(frame_fixo)
+        frame_entrada.grid(row=2, column=0, columnspan=2, pady=5)
+
+        ttk.Label(frame_entrada, text="Valor da Entrada:*").grid(row=0, column=0, padx=5, pady=2)
+        valor_entrada_entry = ttk.Entry(frame_entrada)
+        valor_entrada_entry.grid(row=0, column=1, padx=5, pady=2)
+        valor_entrada_entry.insert(0, "0.00")
+
+        ttk.Label(frame_entrada, text="Data da Entrada:*").grid(row=1, column=0, padx=5, pady=2)
+        data_entrada = DateEntry(frame_entrada, width=20, date_pattern='dd/mm/yyyy', locale='pt_BR')
+        data_entrada.grid(row=1, column=1, padx=5, pady=2)
+
         # Número de Parcelas
-        ttk.Label(frame_fixo, text="Nº Parcelas:*").grid(row=1, column=0, padx=5, pady=2)
+        ttk.Label(frame_fixo, text="Nº Parcelas:*").grid(row=3, column=0, padx=5, pady=2)
         parcelas_entry = ttk.Entry(frame_fixo)
-        parcelas_entry.grid(row=1, column=1, padx=5, pady=2)
+        parcelas_entry.grid(row=3, column=1, padx=5, pady=2)
 
-        # Valor do Sinal/Entrada (novo campo)
-        ttk.Label(frame_fixo, text="Valor do Sinal/Entrada:").grid(row=2, column=0, padx=5, pady=2)
-        valor_entrada_entry = ttk.Entry(frame_fixo)
-        valor_entrada_entry.grid(row=2, column=1, padx=5, pady=2)
-        valor_entrada_entry.insert(0, "0.00")  # Valor padrão
-
-         # Valor por Parcela (calculado)
-        ttk.Label(frame_fixo, text="Valor por Parcela:").grid(row=3, column=0, padx=5, pady=2)
-        valor_parcela_entry = ttk.Entry(frame_fixo, state='readonly')
-        valor_parcela_entry.grid(row=3, column=1, padx=5, pady=2)
-
-        # Data Inicial de Pagamento
+        # Data Inicial
         ttk.Label(frame_fixo, text="Data Inicial Pagamento:*").grid(row=4, column=0, padx=5, pady=2)
-        data_inicial_pagto = DateEntry(frame_fixo, 
-                                     width=20, 
-                                     date_pattern='dd/mm/yyyy',
-                                     locale='pt_BR')
+        data_inicial_pagto = DateEntry(frame_fixo, width=20, date_pattern='dd/mm/yyyy', locale='pt_BR')
         data_inicial_pagto.grid(row=4, column=1, padx=5, pady=2)
-        data_inicial_pagto.delete(0, tk.END)  # Remove a data padrão
 
+        def atualizar_campos_entrada():
+            """Atualiza visibilidade dos campos de entrada"""
+            if tem_entrada.get():
+                frame_entrada.grid()
+            else:
+                frame_entrada.grid_remove()
+                valor_entrada_entry.delete(0, tk.END)
+                valor_entrada_entry.insert(0, "0.00")
 
         def calcular_valor_parcela(*args):
+            """Calcula o valor das parcelas considerando entrada"""
             try:
                 valor_total = float(valor_total_entry.get().replace(',', '.'))
                 valor_entrada = float(valor_entrada_entry.get().replace(',', '.') or "0")
-                
+                num_parcelas = int(parcelas_entry.get() or "0")
+
                 if valor_entrada >= valor_total:
-                    messagebox.showerror("Erro", "Valor do sinal não pode ser maior ou igual ao valor total!")
+                    messagebox.showerror("Erro", "Valor da entrada não pode ser maior ou igual ao valor total!")
                     valor_entrada_entry.delete(0, tk.END)
                     valor_entrada_entry.insert(0, "0.00")
                     return
-                    
-                valor_restante = valor_total - valor_entrada
-                num_parcelas = int(parcelas_entry.get())
-                
-                if num_parcelas <= 0:
-                    messagebox.showerror("Erro", "Número de parcelas deve ser maior que zero!")
-                    return
-                    
-                valor_parcela = valor_restante / num_parcelas
-                
-                valor_parcela_entry.config(state='normal')
-                valor_parcela_entry.delete(0, tk.END)
-                valor_parcela_entry.insert(0, f"{valor_parcela:.2f}")
-                valor_parcela_entry.config(state='readonly')
-                
-                # Atualiza o campo valor/percentual (que será o valor da parcela)
-                valor_entry.config(state='normal')
-                valor_entry.delete(0, tk.END)
-                valor_entry.insert(0, f"{valor_parcela:.2f}")
-                valor_entry.config(state='readonly')
-                
-            except ValueError:
-                valor_parcela_entry.config(state='normal')
-                valor_parcela_entry.delete(0, tk.END)
-                valor_parcela_entry.config(state='readonly')
-                valor_entry.config(state='normal')
-                valor_entry.delete(0, tk.END)
-                valor_entry.config(state='readonly')
 
-        def atualizar_campos_fixo(*args):
-            if tipo_combo.get() == 'Fixo':
-                frame_fixo.grid()
-                valor_entry.config(state='readonly')
-            else:
-                frame_fixo.grid_remove()
-                valor_entry.config(state='normal')
-                valor_entry.delete(0, tk.END)
+                valor_restante = valor_total - valor_entrada
+                if num_parcelas > 0:
+                    valor_parcela = valor_restante / num_parcelas
+                    return valor_parcela
+                return 0
+
+            except (ValueError, ZeroDivisionError):
+                return 0
 
         def confirmar():
+            """Confirma a adição do administrador"""
             try:
-                # Validações
-                if not cnpj_cpf_entry.get() or not nome_entry.get():
-                    messagebox.showerror("Erro", "Selecione um fornecedor!")
+                if not cnpj_cpf_entry.get() or not nome_entry.get() or not tipo_combo.get():
+                    messagebox.showerror("Erro", "Preencha todos os campos obrigatórios!")
                     return
 
-                if not tipo_combo.get():
-                    messagebox.showerror("Erro", "Selecione o tipo!")
-                    return
+                if tipo_combo.get() == 'Fixo':
+                    if not valor_total_entry.get() or not parcelas_entry.get():
+                        messagebox.showerror("Erro", "Preencha valor total e número de parcelas!")
+                        return
 
-                if not valor_entry.get():
-                    messagebox.showerror("Erro", "Informe o valor/percentual!")
-                    return
+                    valor_entrada = float(valor_entrada_entry.get().replace(',', '.'))
+                    if tem_entrada.get() and valor_entrada > 0:
+                        # Adicionar registro de entrada
+                        valores_entrada = (
+                            cnpj_cpf_entry.get(),
+                            nome_entry.get(),
+                            tipo_combo.get(),
+                            f"{valor_entrada:.2f}",
+                            valor_total_entry.get(),
+                            "1",  # Uma parcela para entrada
+                            data_entrada.get()
+                        )
+                        tree.insert('', 'end', values=valores_entrada, tags=('entrada',))
 
-                # Adicionar à tree original
-                valores = (
-                    cnpj_cpf_entry.get(),
-                    nome_entry.get(),
-                    tipo_combo.get(),
-                    valor_entry.get(),
-                    valor_total_entry.get() if tipo_combo.get() == 'Fixo' else '',
-                    parcelas_entry.get() if tipo_combo.get() == 'Fixo' else '',
-                    data_inicial_pagto.get() if tipo_combo.get() == 'Fixo' else ''
-                )
-                tree.insert('', 'end', values=valores)
+                    # Calcular valor da parcela
+                    valor_parcela = calcular_valor_parcela()
+                    if valor_parcela > 0:
+                        # Adicionar registro de parcelas
+                        valores_parcelas = (
+                            cnpj_cpf_entry.get(),
+                            nome_entry.get(),
+                            tipo_combo.get(),
+                            f"{valor_parcela:.2f}",
+                            valor_total_entry.get(),
+                            parcelas_entry.get(),
+                            data_inicial_pagto.get()
+                        )
+                        tree.insert('', 'end', values=valores_parcelas, tags=('parcelas',))
+
                 janela.destroy()
 
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao confirmar: {str(e)}")
 
+        def atualizar_campos_fixo(*args):
+            """Atualiza campos baseado no tipo selecionado"""
+            if tipo_combo.get() == 'Fixo':
+                frame_fixo.grid()  # Mostra frame de valores fixos
+                
+                # Se tem entrada, mostra frame de entrada também
+                if tem_entrada.get():
+                    frame_entrada.grid()
+                else:
+                    frame_entrada.grid_remove()
+            else:
+                frame_fixo.grid_remove()  # Esconde todos os campos de valor fixo
+                frame_entrada.grid_remove()  # Esconde campos de entrada
+
         # Configurar eventos
-        valor_total_entry.bind('<KeyRelease>', calcular_valor_parcela)
-        parcelas_entry.bind('<KeyRelease>', calcular_valor_parcela)
-        valor_entrada_entry.bind('<KeyRelease>', calcular_valor_parcela)
+        valor_total_entry.bind('<KeyRelease>', lambda e: calcular_valor_parcela())
+        parcelas_entry.bind('<KeyRelease>', lambda e: calcular_valor_parcela())
+        valor_entrada_entry.bind('<KeyRelease>', lambda e: calcular_valor_parcela())
         tipo_combo.bind('<<ComboboxSelected>>', atualizar_campos_fixo)
 
-        # Frame para botões no final
+        # Esconder campos de entrada inicialmente
+        frame_entrada.grid_remove()
+
+        # Botões
         frame_botoes = ttk.Frame(frame)
         frame_botoes.pack(fill='x', pady=10)
         ttk.Button(frame_botoes, text="Confirmar", command=confirmar).pack(side='left', padx=5)
         ttk.Button(frame_botoes, text="Cancelar", command=janela.destroy).pack(side='left', padx=5)
 
-        # Inicialmente ocultar frame_fixo
-        frame_fixo.grid_remove()
-
+        # Função de busca
         def busca_local():
             termo = busca_entry.get()
             buscar_fornecedor(tree_fornecedores, termo)
 
-        # Adicionar botão de busca no frame_busca
         ttk.Button(frame_busca, text="Buscar", command=busca_local).pack(side='left', padx=5)
         busca_entry.bind('<Return>', lambda e: busca_local())
 
@@ -3211,10 +3236,8 @@ class GestaoContratos:
             selecionado = tree_fornecedores.selection()
             if not selecionado:
                 return
-                
+
             valores = tree_fornecedores.item(selecionado)['values']
-            
-            # Configurar e preencher campos
             cnpj_cpf_entry.config(state='normal')
             nome_entry.config(state='normal')
             
@@ -3227,8 +3250,7 @@ class GestaoContratos:
             cnpj_cpf_entry.config(state='readonly')
             nome_entry.config(state='readonly')
 
-        # Adicionar binding para duplo clique
-        tree_fornecedores.bind('<Double-1>', selecionar_e_preencher)           
+        tree_fornecedores.bind('<Double-1>', selecionar_e_preencher)          
 
         
 
@@ -3246,6 +3268,7 @@ class GestaoContratos:
 
             wb = load_workbook(self.arquivo_cliente)
             ws = wb['Contratos_ADM']
+            ws_dados = wb['Dados']
 
             # Verificar se o contrato já existe
             for row in ws.iter_rows(min_row=2, values_only=True):
@@ -3261,71 +3284,105 @@ class GestaoContratos:
             ws.cell(row=proxima_linha, column=4, value='ATIVO')
             ws.cell(row=proxima_linha, column=5, value=observacoes)
 
-            # Salvar administradores
+            # Processar administradores
             for item in self.tree_adm.get_children():
                 valores = self.tree_adm.item(item)['values']
-                proxima_linha = ws.max_row + 1
+                tags = self.tree_adm.item(item)['tags']
                 
                 # Formatação do CNPJ/CPF
                 cnpj_cpf = str(valores[0]).strip()
                 cnpj_cpf = formatar_cnpj_cpf(cnpj_cpf)
-                nome_admin = valores[1]  # Nome do administrador
+                nome_admin = valores[1]
+
+                # Registrar administrador no contrato apenas uma vez
+                proxima_linha = ws.max_row + 1
+                ws.cell(row=proxima_linha, column=7, value=num_contrato)
+                ws.cell(row=proxima_linha, column=8, value=cnpj_cpf)
+                ws.cell(row=proxima_linha, column=9, value=nome_admin)
+                ws.cell(row=proxima_linha, column=10, value=valores[2])  # Tipo
+                ws.cell(row=proxima_linha, column=11, value=valores[3])  # Valor/Percentual
+                ws.cell(row=proxima_linha, column=12, value=valores[4])  # Valor Total
+                ws.cell(row=proxima_linha, column=13, value=valores[5])  # Nº Parcelas
                 
-                ws.cell(row=proxima_linha, column=7, value=num_contrato)  # Nº Contrato
-                ws.cell(row=proxima_linha, column=8, value=cnpj_cpf)      # CNPJ/CPF
-                ws.cell(row=proxima_linha, column=9, value=valores[1])    # Nome
-                ws.cell(row=proxima_linha, column=10, value=valores[2])   # Tipo
-                ws.cell(row=proxima_linha, column=11, value=valores[3])   # Valor/Percentual
-                
-                # Se for do tipo Fixo, salvar valor total e número de parcelas
-                if valores[2] == 'Fixo':
-                    ws.cell(row=proxima_linha, column=12, value=valores[4])  # Valor Total
-                    ws.cell(row=proxima_linha, column=13, value=valores[5])  # Nº Parcelas
-                    
-                    # Se tiver parcelas definidas, criar registros de parcelas
-                    if valores[5]:
-                        try:
-                            num_parcelas = int(valores[5])
-                            valor_parcela = float(str(valores[3]).replace(',', '.'))
-                            data_inicial = datetime.strptime(valores[6], '%d/%m/%Y') if valores[6] else data_inicio
+                if valores[2] == 'Fixo' and 'entrada' in (tags or ()):
+                    # Se é uma entrada, registra apenas na aba Dados
+                    try:
+                        # Calcular data de relatório para entrada
+                        hoje = datetime.now()
+                        if hoje.day <= 5:
+                            data_rel = hoje.replace(day=5)
+                        elif hoje.day <= 20:
+                            data_rel = hoje.replace(day=20)
+                        else:
+                            data_rel = (hoje + relativedelta(months=1)).replace(day=5)
+
+                        data_rel_str = data_rel.strftime('%d/%m/%Y')
+                        data_vencto = datetime.strptime(valores[6], '%d/%m/%Y')
+                        data_vencto_str = data_vencto.strftime('%d/%m/%Y')
+
+                        # Registrar entrada na aba Dados
+                        proxima_linha_dados = ws_dados.max_row + 1
+                        ws_dados.cell(row=proxima_linha_dados, column=1, value=data_rel_str)
+                        ws_dados.cell(row=proxima_linha_dados, column=2, value=2)  # Tipo despesa 2
+                        ws_dados.cell(row=proxima_linha_dados, column=3, value=cnpj_cpf)
+                        ws_dados.cell(row=proxima_linha_dados, column=4, value=nome_admin)
+                        ws_dados.cell(row=proxima_linha_dados, column=5, value=f"ADM OBRA - ENTRADA - CONTRATO {num_contrato}")
+                        ws_dados.cell(row=proxima_linha_dados, column=7, value=valores[3])  # Valor da entrada
+                        ws_dados.cell(row=proxima_linha_dados, column=8, value=1)
+                        ws_dados.cell(row=proxima_linha_dados, column=9, value=valores[3])
+                        ws_dados.cell(row=proxima_linha_dados, column=10, value=data_vencto_str)
+                        ws_dados.cell(row=proxima_linha_dados, column=11, value='ADM')
+                        ws_dados.cell(row=proxima_linha_dados, column=12, value='')
+                        ws_dados.cell(row=proxima_linha_dados, column=13, value='LANÇAMENTO AUTOMÁTICO')
+
+                    except (ValueError, TypeError) as e:
+                        messagebox.showwarning(
+                            "Aviso", 
+                            f"Erro ao processar entrada para {nome_admin}: {str(e)}"
+                        )
+
+                elif valores[2] == 'Fixo' and not 'entrada' in (tags or ()):
+                    # Se não é entrada, registra apenas as parcelas normais
+                    try:
+                        data_inicial = datetime.strptime(valores[6], '%d/%m/%Y')
+                        num_parcelas = int(valores[5])
+                        valor_parcela = float(str(valores[3]).replace(',', '.'))
+
+                        for i in range(num_parcelas):
+                            if data_inicial.month + i > 12:
+                                ano = data_inicial.year + ((data_inicial.month + i - 1) // 12)
+                                mes = ((data_inicial.month + i - 1) % 12) + 1
+                            else:
+                                ano = data_inicial.year
+                                mes = data_inicial.month + i
                             
-                            for i in range(num_parcelas):
-                                proxima_linha = ws.max_row + 1
-                                
-                                # Calcular data de vencimento
-                                if data_inicial.month + i > 12:
-                                    ano = data_inicial.year + ((data_inicial.month + i - 1) // 12)
-                                    mes = ((data_inicial.month + i - 1) % 12) + 1
-                                else:
-                                    ano = data_inicial.year
-                                    mes = data_inicial.month + i
-                                
-                                data_vencto = data_inicial.replace(year=ano, month=mes, day=5)
-                                
-                                # Registrar parcela
-                                ws.cell(row=proxima_linha, column=25, value=num_contrato)  # Nº Contrato
-                                ws.cell(row=proxima_linha, column=26, value=i + 1)         # Número da parcela
-                                ws.cell(row=proxima_linha, column=27, value=cnpj_cpf)      # CNPJ/CPF
-                                ws.cell(row=proxima_linha, column=28, value=nome_admin)    # Nome
-                                ws.cell(row=proxima_linha, column=29, value=data_vencto)   # Data vencimento
-                                ws.cell(row=proxima_linha, column=30, value=valor_parcela) # Valor
-                                ws.cell(row=proxima_linha, column=31, value='PENDENTE')    # Status
-                                
-                        except (ValueError, TypeError) as e:
-                            messagebox.showwarning(
-                                "Aviso", 
-                                f"Erro ao processar parcelas para {valores[1]}: {str(e)}"
-                            )
+                            data_vencto = data_inicial.replace(year=ano, month=mes, day=5)
+                            data_vencto_str = data_vencto.strftime('%d/%m/%Y')
+                            
+                            proxima_linha = ws.max_row + 1
+                            ws.cell(row=proxima_linha, column=25, value=num_contrato)
+                            ws.cell(row=proxima_linha, column=26, value=i + 1)
+                            ws.cell(row=proxima_linha, column=27, value=cnpj_cpf)
+                            ws.cell(row=proxima_linha, column=28, value=nome_admin)
+                            ws.cell(row=proxima_linha, column=29, value=data_vencto)
+                            ws.cell(row=proxima_linha, column=30, value=valor_parcela)
+                            ws.cell(row=proxima_linha, column=31, value='PENDENTE')
+
+                    except (ValueError, TypeError) as e:
+                        messagebox.showwarning(
+                            "Aviso", 
+                            f"Erro ao processar parcelas para {nome_admin}: {str(e)}"
+                        )
 
             wb.save(self.arquivo_cliente)
             messagebox.showinfo("Sucesso", "Contrato cadastrado com sucesso!")
             janela.destroy()
-            self.carregar_contratos()  # Atualizar lista de contratos
+            self.carregar_contratos()
 
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao salvar contrato: {str(e)}")
             if 'wb' in locals():
-                wb.close()   
+                wb.close()  
                 
 
     def excluir_contrato(self):
@@ -3900,6 +3957,7 @@ class GestorParcelas:
             num_parcelas = int(self.num_parcelas.get())
             referencia_base = self.referencia_base.get().strip()
             nf = self.campos_nf.get().strip()
+##            print(f"NF capturado do formulário: {nf}")  # Adicione esta linha
             tipo = self.tipo_parcelamento.get()
 
             # Validar dados
@@ -3938,6 +3996,7 @@ class GestorParcelas:
         """
         Método auxiliar para criar uma parcela com todos os dados necessários
         """
+##        print(f"Adicionando parcela com NF: {nf}")  # Adicione esta linha
         parcela = {
             'data_rel': data_rel.strftime('%d/%m/%Y'),
             'dt_vencto': dt_vencto.strftime('%d/%m/%Y'),
