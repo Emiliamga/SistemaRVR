@@ -184,6 +184,51 @@ def selecionar_fornecedor(tree_fornecedores, campos_fornecedor, campos_despesa=N
 
     return fornecedor
 
+
+# === VALUE EXCEL FORMATTING ===
+
+def formatar_valor_excel(valor):
+    """
+    Formata um valor numérico para o padrão brasileiro do Excel (#.##0,00)
+    
+    Args:
+        valor: número ou string representando um valor monetário
+        
+    Returns:
+        float: valor formatado como float com 2 casas decimais
+    """
+    try:
+        # Se for string, converter para float
+        if isinstance(valor, str):
+            # Remover todos os separadores de milhar e trocar vírgula por ponto
+            valor_limpo = valor.replace('.', '').replace(',', '.')
+            valor_float = float(valor_limpo)
+        else:
+            valor_float = float(valor)
+            
+        # Forçar duas casas decimais e converter para número inteiro (centavos)
+        valor_centavos = int(round(valor_float * 100))
+        
+        # Converter de volta para float com exatamente duas casas decimais
+        valor_formatado = valor_centavos / 100.0
+        
+        return valor_formatado
+        
+    except (ValueError, TypeError) as e:
+        print(f"Erro ao formatar valor '{valor}': {str(e)}")
+        return 0.0
+
+def aplicar_formatacao_celula(cell):
+    """
+    Aplica a formatação correta para células de valor no Excel
+    
+    Args:
+        cell: célula do openpyxl
+    """
+    cell.number_format = '#,##0.00'
+    return cell
+    
+
 # === CONSTANTS ===
 DIAS_QUINZENA = [5, 20]
 TIPOS_DESPESA = {
